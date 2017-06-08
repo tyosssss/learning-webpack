@@ -1,0 +1,15 @@
+NodeEnvironmentPlugin before-run
+JsonpTemplatePlugin
+FunctionModulePlugin
+NodeSourcePlugin
+LoaderTargetPlugin
+LibraryTemplatePlugin
+ExternalsPlugin
+
+EvalSourceMapDevToolPlugin
+SourceMapDevToolPlugin
+EvalDevToolModulePlugin
+
+EntryOptionPlugin entry-option
+SingleEntryPlugin
+DynamicEntryPlugin

@@ -1,0 +1,730 @@
+{
+  "errors": [],
+  "warnings": [],
+  "version": "1.13.2",
+  "hash": "1646259397421e260448",
+  "time": 155,
+  "publicPath": "",
+  "assetsByChunkName": {
+    "a": "a.js",
+    "b": "b.js",
+    "jquery": "jquery.js"
+  },
+  "assets": [
+    {
+      "name": "a.js",
+      "size": 1937,
+      "chunks": [
+        0
+      ],
+      "chunkNames": [
+        "a"
+      ],
+      "emitted": true
+    },
+    {
+      "name": "b.js",
+      "size": 1937,
+      "chunks": [
+        1
+      ],
+      "chunkNames": [
+        "b"
+      ],
+      "emitted": true
+    },
+    {
+      "name": "jquery.js",
+      "size": 1567,
+      "chunks": [
+        2
+      ],
+      "chunkNames": [
+        "jquery"
+      ],
+      "emitted": true
+    }
+  ],
+  "chunks": [
+    {
+      "id": 0,
+      "rendered": true,
+      "initial": true,
+      "entry": true,
+      "extraAsync": false,
+      "size": 345,
+      "names": [
+        "a"
+      ],
+      "files": [
+        "a.js"
+      ],
+      "hash": "ecef0ecf2263010fdd7a",
+      "parents": [],
+      "modules": [
+        {
+          "id": 0,
+          "identifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+          "name": "./a.js",
+          "index": 0,
+          "index2": 3,
+          "size": 163,
+          "cacheable": true,
+          "built": true,
+          "optional": false,
+          "prefetched": false,
+          "chunks": [
+            0
+          ],
+          "assets": [],
+          "issuer": null,
+          "failed": false,
+          "errors": 0,
+          "warnings": 0,
+          "reasons": [],
+          "source": "let jquery = require('./jquery')\r\nlet common1 = require('./common1')\r\nlet common2 = require('./common2')\r\n\r\nmodule.exports = function () {\r\n  console.log('a')\r\n}\r\n"
+        },
+        {
+          "id": 1,
+          "identifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\jquery.js",
+          "name": "./jquery.js",
+          "index": 1,
+          "index2": 0,
+          "size": 60,
+          "cacheable": true,
+          "built": true,
+          "optional": false,
+          "prefetched": false,
+          "chunks": [
+            0,
+            1,
+            2
+          ],
+          "assets": [],
+          "issuer": "multi jquery",
+          "failed": false,
+          "errors": 0,
+          "warnings": 0,
+          "reasons": [
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "multi jquery",
+              "module": "multi jquery",
+              "moduleName": "multi jquery",
+              "type": "single entry",
+              "userRequest": "./jquery"
+            },
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+              "module": "./a.js",
+              "moduleName": "./a.js",
+              "type": "cjs require",
+              "userRequest": "./jquery",
+              "loc": "1:13-32"
+            },
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\b.js",
+              "module": "./b.js",
+              "moduleName": "./b.js",
+              "type": "cjs require",
+              "userRequest": "./jquery",
+              "loc": "1:13-32"
+            }
+          ],
+          "source": "module.exports = function () {\r\n  console.log('jquery')\r\n}\r\n"
+        },
+        {
+          "id": 2,
+          "identifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\common1.js",
+          "name": "./common1.js",
+          "index": 2,
+          "index2": 1,
+          "size": 61,
+          "cacheable": true,
+          "built": true,
+          "optional": false,
+          "prefetched": false,
+          "chunks": [
+            0,
+            1
+          ],
+          "assets": [],
+          "issuer": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+          "failed": false,
+          "errors": 0,
+          "warnings": 0,
+          "reasons": [
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+              "module": "./a.js",
+              "moduleName": "./a.js",
+              "type": "cjs require",
+              "userRequest": "./common1",
+              "loc": "2:14-34"
+            },
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\b.js",
+              "module": "./b.js",
+              "moduleName": "./b.js",
+              "type": "cjs require",
+              "userRequest": "./common1",
+              "loc": "2:14-34"
+            }
+          ],
+          "source": "module.exports = function () {\r\n  console.log('common1')\r\n}\r\n"
+        },
+        {
+          "id": 3,
+          "identifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\common2.js",
+          "name": "./common2.js",
+          "index": 3,
+          "index2": 2,
+          "size": 61,
+          "cacheable": true,
+          "built": true,
+          "optional": false,
+          "prefetched": false,
+          "chunks": [
+            0,
+            1
+          ],
+          "assets": [],
+          "issuer": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+          "failed": false,
+          "errors": 0,
+          "warnings": 0,
+          "reasons": [
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+              "module": "./a.js",
+              "moduleName": "./a.js",
+              "type": "cjs require",
+              "userRequest": "./common2",
+              "loc": "3:14-34"
+            },
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\b.js",
+              "module": "./b.js",
+              "moduleName": "./b.js",
+              "type": "cjs require",
+              "userRequest": "./common2",
+              "loc": "3:14-34"
+            }
+          ],
+          "source": "module.exports = function () {\r\n  console.log('common2')\r\n}\r\n"
+        }
+      ],
+      "filteredModules": 0,
+      "origins": [
+        {
+          "moduleId": 0,
+          "module": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+          "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+          "moduleName": "./a.js",
+          "loc": "",
+          "name": "a",
+          "reasons": []
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "rendered": true,
+      "initial": true,
+      "entry": true,
+      "extraAsync": false,
+      "size": 345,
+      "names": [
+        "b"
+      ],
+      "files": [
+        "b.js"
+      ],
+      "hash": "a9058b787ff84a425f32",
+      "parents": [],
+      "modules": [
+        {
+          "id": 0,
+          "identifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\b.js",
+          "name": "./b.js",
+          "index": 4,
+          "index2": 4,
+          "size": 163,
+          "cacheable": true,
+          "built": true,
+          "optional": false,
+          "prefetched": false,
+          "chunks": [
+            1
+          ],
+          "assets": [],
+          "issuer": null,
+          "failed": false,
+          "errors": 0,
+          "warnings": 0,
+          "reasons": [],
+          "source": "let jquery = require('./jquery')\r\nlet common1 = require('./common1')\r\nlet common2 = require('./common2')\r\n\r\nmodule.exports = function () {\r\n  console.log('b')\r\n}\r\n"
+        },
+        {
+          "id": 1,
+          "identifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\jquery.js",
+          "name": "./jquery.js",
+          "index": 1,
+          "index2": 0,
+          "size": 60,
+          "cacheable": true,
+          "built": true,
+          "optional": false,
+          "prefetched": false,
+          "chunks": [
+            0,
+            1,
+            2
+          ],
+          "assets": [],
+          "issuer": "multi jquery",
+          "failed": false,
+          "errors": 0,
+          "warnings": 0,
+          "reasons": [
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "multi jquery",
+              "module": "multi jquery",
+              "moduleName": "multi jquery",
+              "type": "single entry",
+              "userRequest": "./jquery"
+            },
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+              "module": "./a.js",
+              "moduleName": "./a.js",
+              "type": "cjs require",
+              "userRequest": "./jquery",
+              "loc": "1:13-32"
+            },
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\b.js",
+              "module": "./b.js",
+              "moduleName": "./b.js",
+              "type": "cjs require",
+              "userRequest": "./jquery",
+              "loc": "1:13-32"
+            }
+          ],
+          "source": "module.exports = function () {\r\n  console.log('jquery')\r\n}\r\n"
+        },
+        {
+          "id": 2,
+          "identifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\common1.js",
+          "name": "./common1.js",
+          "index": 2,
+          "index2": 1,
+          "size": 61,
+          "cacheable": true,
+          "built": true,
+          "optional": false,
+          "prefetched": false,
+          "chunks": [
+            0,
+            1
+          ],
+          "assets": [],
+          "issuer": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+          "failed": false,
+          "errors": 0,
+          "warnings": 0,
+          "reasons": [
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+              "module": "./a.js",
+              "moduleName": "./a.js",
+              "type": "cjs require",
+              "userRequest": "./common1",
+              "loc": "2:14-34"
+            },
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\b.js",
+              "module": "./b.js",
+              "moduleName": "./b.js",
+              "type": "cjs require",
+              "userRequest": "./common1",
+              "loc": "2:14-34"
+            }
+          ],
+          "source": "module.exports = function () {\r\n  console.log('common1')\r\n}\r\n"
+        },
+        {
+          "id": 3,
+          "identifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\common2.js",
+          "name": "./common2.js",
+          "index": 3,
+          "index2": 2,
+          "size": 61,
+          "cacheable": true,
+          "built": true,
+          "optional": false,
+          "prefetched": false,
+          "chunks": [
+            0,
+            1
+          ],
+          "assets": [],
+          "issuer": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+          "failed": false,
+          "errors": 0,
+          "warnings": 0,
+          "reasons": [
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+              "module": "./a.js",
+              "moduleName": "./a.js",
+              "type": "cjs require",
+              "userRequest": "./common2",
+              "loc": "3:14-34"
+            },
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\b.js",
+              "module": "./b.js",
+              "moduleName": "./b.js",
+              "type": "cjs require",
+              "userRequest": "./common2",
+              "loc": "3:14-34"
+            }
+          ],
+          "source": "module.exports = function () {\r\n  console.log('common2')\r\n}\r\n"
+        }
+      ],
+      "filteredModules": 0,
+      "origins": [
+        {
+          "moduleId": 0,
+          "module": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\b.js",
+          "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\b.js",
+          "moduleName": "./b.js",
+          "loc": "",
+          "name": "b",
+          "reasons": []
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "rendered": true,
+      "initial": true,
+      "entry": true,
+      "extraAsync": false,
+      "size": 88,
+      "names": [
+        "jquery"
+      ],
+      "files": [
+        "jquery.js"
+      ],
+      "hash": "d25d66413892981f43dc",
+      "parents": [],
+      "modules": [
+        {
+          "id": 0,
+          "identifier": "multi jquery",
+          "name": "multi jquery",
+          "index": 5,
+          "index2": 5,
+          "size": 28,
+          "cacheable": true,
+          "built": true,
+          "optional": false,
+          "prefetched": false,
+          "chunks": [
+            2
+          ],
+          "assets": [],
+          "issuer": null,
+          "failed": false,
+          "errors": 0,
+          "warnings": 0,
+          "reasons": []
+        },
+        {
+          "id": 1,
+          "identifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\jquery.js",
+          "name": "./jquery.js",
+          "index": 1,
+          "index2": 0,
+          "size": 60,
+          "cacheable": true,
+          "built": true,
+          "optional": false,
+          "prefetched": false,
+          "chunks": [
+            0,
+            1,
+            2
+          ],
+          "assets": [],
+          "issuer": "multi jquery",
+          "failed": false,
+          "errors": 0,
+          "warnings": 0,
+          "reasons": [
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "multi jquery",
+              "module": "multi jquery",
+              "moduleName": "multi jquery",
+              "type": "single entry",
+              "userRequest": "./jquery"
+            },
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+              "module": "./a.js",
+              "moduleName": "./a.js",
+              "type": "cjs require",
+              "userRequest": "./jquery",
+              "loc": "1:13-32"
+            },
+            {
+              "moduleId": 0,
+              "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\b.js",
+              "module": "./b.js",
+              "moduleName": "./b.js",
+              "type": "cjs require",
+              "userRequest": "./jquery",
+              "loc": "1:13-32"
+            }
+          ],
+          "source": "module.exports = function () {\r\n  console.log('jquery')\r\n}\r\n"
+        }
+      ],
+      "filteredModules": 0,
+      "origins": [
+        {
+          "moduleId": 0,
+          "module": "multi jquery",
+          "moduleIdentifier": "multi jquery",
+          "moduleName": "multi jquery",
+          "loc": "",
+          "name": "jquery",
+          "reasons": []
+        }
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "id": 0,
+      "identifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+      "name": "./a.js",
+      "index": 0,
+      "index2": 3,
+      "size": 163,
+      "cacheable": true,
+      "built": true,
+      "optional": false,
+      "prefetched": false,
+      "chunks": [
+        0
+      ],
+      "assets": [],
+      "issuer": null,
+      "failed": false,
+      "errors": 0,
+      "warnings": 0,
+      "reasons": [],
+      "source": "let jquery = require('./jquery')\r\nlet common1 = require('./common1')\r\nlet common2 = require('./common2')\r\n\r\nmodule.exports = function () {\r\n  console.log('a')\r\n}\r\n"
+    },
+    {
+      "id": 0,
+      "identifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\b.js",
+      "name": "./b.js",
+      "index": 4,
+      "index2": 4,
+      "size": 163,
+      "cacheable": true,
+      "built": true,
+      "optional": false,
+      "prefetched": false,
+      "chunks": [
+        1
+      ],
+      "assets": [],
+      "issuer": null,
+      "failed": false,
+      "errors": 0,
+      "warnings": 0,
+      "reasons": [],
+      "source": "let jquery = require('./jquery')\r\nlet common1 = require('./common1')\r\nlet common2 = require('./common2')\r\n\r\nmodule.exports = function () {\r\n  console.log('b')\r\n}\r\n"
+    },
+    {
+      "id": 0,
+      "identifier": "multi jquery",
+      "name": "multi jquery",
+      "index": 5,
+      "index2": 5,
+      "size": 28,
+      "cacheable": true,
+      "built": true,
+      "optional": false,
+      "prefetched": false,
+      "chunks": [
+        2
+      ],
+      "assets": [],
+      "issuer": null,
+      "failed": false,
+      "errors": 0,
+      "warnings": 0,
+      "reasons": []
+    },
+    {
+      "id": 1,
+      "identifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\jquery.js",
+      "name": "./jquery.js",
+      "index": 1,
+      "index2": 0,
+      "size": 60,
+      "cacheable": true,
+      "built": true,
+      "optional": false,
+      "prefetched": false,
+      "chunks": [
+        0,
+        1,
+        2
+      ],
+      "assets": [],
+      "issuer": "multi jquery",
+      "failed": false,
+      "errors": 0,
+      "warnings": 0,
+      "reasons": [
+        {
+          "moduleId": 0,
+          "moduleIdentifier": "multi jquery",
+          "module": "multi jquery",
+          "moduleName": "multi jquery",
+          "type": "single entry",
+          "userRequest": "./jquery"
+        },
+        {
+          "moduleId": 0,
+          "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+          "module": "./a.js",
+          "moduleName": "./a.js",
+          "type": "cjs require",
+          "userRequest": "./jquery",
+          "loc": "1:13-32"
+        },
+        {
+          "moduleId": 0,
+          "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\b.js",
+          "module": "./b.js",
+          "moduleName": "./b.js",
+          "type": "cjs require",
+          "userRequest": "./jquery",
+          "loc": "1:13-32"
+        }
+      ],
+      "source": "module.exports = function () {\r\n  console.log('jquery')\r\n}\r\n"
+    },
+    {
+      "id": 2,
+      "identifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\common1.js",
+      "name": "./common1.js",
+      "index": 2,
+      "index2": 1,
+      "size": 61,
+      "cacheable": true,
+      "built": true,
+      "optional": false,
+      "prefetched": false,
+      "chunks": [
+        0,
+        1
+      ],
+      "assets": [],
+      "issuer": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+      "failed": false,
+      "errors": 0,
+      "warnings": 0,
+      "reasons": [
+        {
+          "moduleId": 0,
+          "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+          "module": "./a.js",
+          "moduleName": "./a.js",
+          "type": "cjs require",
+          "userRequest": "./common1",
+          "loc": "2:14-34"
+        },
+        {
+          "moduleId": 0,
+          "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\b.js",
+          "module": "./b.js",
+          "moduleName": "./b.js",
+          "type": "cjs require",
+          "userRequest": "./common1",
+          "loc": "2:14-34"
+        }
+      ],
+      "source": "module.exports = function () {\r\n  console.log('common1')\r\n}\r\n"
+    },
+    {
+      "id": 3,
+      "identifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\common2.js",
+      "name": "./common2.js",
+      "index": 3,
+      "index2": 2,
+      "size": 61,
+      "cacheable": true,
+      "built": true,
+      "optional": false,
+      "prefetched": false,
+      "chunks": [
+        0,
+        1
+      ],
+      "assets": [],
+      "issuer": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+      "failed": false,
+      "errors": 0,
+      "warnings": 0,
+      "reasons": [
+        {
+          "moduleId": 0,
+          "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\a.js",
+          "module": "./a.js",
+          "moduleName": "./a.js",
+          "type": "cjs require",
+          "userRequest": "./common2",
+          "loc": "3:14-34"
+        },
+        {
+          "moduleId": 0,
+          "moduleIdentifier": "G:\\Code\\github\\77681649\\learning-webpack\\examples\\commons-chunk-plugin\\example1\\src\\b.js",
+          "module": "./b.js",
+          "moduleName": "./b.js",
+          "type": "cjs require",
+          "userRequest": "./common2",
+          "loc": "3:14-34"
+        }
+      ],
+      "source": "module.exports = function () {\r\n  console.log('common2')\r\n}\r\n"
+    }
+  ],
+  "filteredModules": 0,
+  "children": []
+}
