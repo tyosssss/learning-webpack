@@ -248,8 +248,11 @@ class WebpackOptionsApply extends OptionsApply {
 
     // sub 入口块插件
 		compiler.apply(new EntryOptionPlugin());
-		compiler.applyPluginsBailResult("entry-option", options.context, options.entry);
 
+		// pub entry-option
+		compiler.applyPluginsBailResult("entry-option", options.context, options.entry);
+		
+		// sub 插件
 		compiler.apply(
 			new CompatibilityPlugin(),
 			new HarmonyModulesPlugin(options.module),
@@ -268,6 +271,7 @@ class WebpackOptionsApply extends OptionsApply {
 			new SystemPlugin(options.module)
 		);
 
+		// sub 插件
 		compiler.apply(
 			new EnsureChunkConditionsPlugin(),
 			new RemoveParentModulesPlugin(),
@@ -279,6 +283,7 @@ class WebpackOptionsApply extends OptionsApply {
 			new FlagDependencyUsagePlugin()
 		);
 
+		// 处理 performance -- 注册相关插件
 		if(options.performance) {
 			compiler.apply(new SizeLimitsPlugin(options.performance));
 		}
@@ -289,24 +294,38 @@ class WebpackOptionsApply extends OptionsApply {
 
 		compiler.apply(new WarnCaseSensitiveModulesPlugin());
 
+		// 处理 cache - 注册相关插件
 		if(options.cache) {
 			let CachePlugin = require("./CachePlugin");
-			compiler.apply(new CachePlugin(typeof options.cache === "object" ? options.cache : null));
+			compiler.apply(new CachePlugin(typeof options.cache === "object" 
+				? options.cache 
+				: null));
 		}
 
 		compiler.applyPlugins("after-plugins", compiler);
-		if(!compiler.inputFileSystem) throw new Error("No input filesystem provided");
+
+		if(!compiler.inputFileSystem) 
+			throw new Error("No input filesystem provided");
+		
+		// 创建普通模块的解析器
 		compiler.resolvers.normal = ResolverFactory.createResolver(Object.assign({
 			fileSystem: compiler.inputFileSystem
 		}, options.resolve));
+
+		// 创建上下文模块的解析器
 		compiler.resolvers.context = ResolverFactory.createResolver(Object.assign({
 			fileSystem: compiler.inputFileSystem,
 			resolveToContext: true
 		}, options.resolve));
+
+		// 创建加载器的解析器
 		compiler.resolvers.loader = ResolverFactory.createResolver(Object.assign({
 			fileSystem: compiler.inputFileSystem
 		}, options.resolveLoader));
+
+		// pub after-resolvers
 		compiler.applyPlugins("after-resolvers", compiler);
+		
 		return options;
 	}
 }

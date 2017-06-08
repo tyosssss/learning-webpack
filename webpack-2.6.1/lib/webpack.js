@@ -70,7 +70,8 @@ function webpack(options, callback) {
     if (typeof callback !== "function") 
       throw new Error("Invalid argument: callback");
 
-    if (options.watch === true || (Array.isArray(options) && options.some(o => o.watch))) {
+    if (options.watch === true || 
+        (Array.isArray(options) && options.some(o => o.watch))) {
       const watchOptions = Array.isArray(options) 
         ? options.map(o => o.watchOptions || {}) 
         : (options.watchOptions || {});

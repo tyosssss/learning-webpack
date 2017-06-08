@@ -218,6 +218,10 @@ Compiler.prototype = Object.create(Tapable.prototype);
 Compiler.prototype.constructor = Compiler;
 
 Compiler.Watching = Watching;
+
+/**
+ * 
+ */
 Compiler.prototype.watch = function(watchOptions, handler) {
 	this.fileTimestamps = {};
 	this.contextTimestamps = {};
@@ -225,6 +229,10 @@ Compiler.prototype.watch = function(watchOptions, handler) {
 	return watching;
 };
 
+/**
+ * 运行 编译
+ * @param {Function} callback
+ */
 Compiler.prototype.run = function(callback) {
 	var self = this;
 	var startTime = Date.now();
@@ -283,6 +291,9 @@ Compiler.prototype.run = function(callback) {
 	});
 };
 
+/**
+ * 
+ */
 Compiler.prototype.runAsChild = function(callback) {
 	this.compile(function(err, compilation) {
 		if(err) return callback(err);
@@ -302,11 +313,17 @@ Compiler.prototype.runAsChild = function(callback) {
 	}.bind(this));
 };
 
+/**
+ * 
+ */
 Compiler.prototype.purgeInputFileSystem = function() {
 	if(this.inputFileSystem && this.inputFileSystem.purge)
 		this.inputFileSystem.purge();
 };
 
+/**
+ * 
+ */
 Compiler.prototype.emitAssets = function(compilation, callback) {
 	var outputPath;
 
@@ -368,6 +385,9 @@ Compiler.prototype.emitAssets = function(compilation, callback) {
 
 };
 
+/**
+ * 
+ */
 Compiler.prototype.emitRecords = function emitRecords(callback) {
 	if(!this.recordsOutputPath) return callback();
 	var idx1 = this.recordsOutputPath.lastIndexOf("/");
@@ -386,12 +406,17 @@ Compiler.prototype.emitRecords = function emitRecords(callback) {
 	}
 };
 
+/**
+ * @param {Function} callback
+ */
 Compiler.prototype.readRecords = function readRecords(callback) {
 	var self = this;
+	
 	if(!self.recordsInputPath) {
 		self.records = {};
 		return callback();
 	}
+
 	self.inputFileSystem.stat(self.recordsInputPath, function(err) {
 		// It doesn't exist
 		// We can ignore self.
@@ -412,6 +437,9 @@ Compiler.prototype.readRecords = function readRecords(callback) {
 	});
 };
 
+/**
+ * 
+ */
 Compiler.prototype.createChildCompiler = function(compilation, compilerName, outputOptions, plugins) {
 	var childCompiler = new Compiler();
 	if(Array.isArray(plugins)) {
@@ -439,14 +467,23 @@ Compiler.prototype.createChildCompiler = function(compilation, compilerName, out
 	return childCompiler;
 };
 
+/**
+ * 
+ */
 Compiler.prototype.isChild = function() {
 	return !!this.parentCompilation;
 };
 
+/**
+ * 
+ */
 Compiler.prototype.createCompilation = function() {
 	return new Compilation(this);
 };
 
+/**
+ * 
+ */
 Compiler.prototype.newCompilation = function(params) {
 	var compilation = this.createCompilation();
 	compilation.fileTimestamps = this.fileTimestamps;

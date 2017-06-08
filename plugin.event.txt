@@ -1,4 +1,5 @@
 NodeEnvironmentPlugin before-run
+
 JsonpTemplatePlugin
 FunctionModulePlugin
 NodeSourcePlugin
@@ -13,3 +14,33 @@ EvalDevToolModulePlugin
 EntryOptionPlugin entry-option
 SingleEntryPlugin
 DynamicEntryPlugin
+
+CompatibilityPlugin
+HarmonyModulesPlugin
+AMDPlugin
+CommonJsPlugin
+LoaderPlugin
+NodeStuffPlugin
+RequireJsStuffPlugin
+APIPlugin
+ConstPlugin
+UseStrictPlugin
+RequireIncludePlugin
+RequireEnsurePlugin
+RequireContextPlugin
+ImportPlugin
+SystemPlugin
+
+EnsureChunkConditionsPlugin
+RemoveParentModulesPlugin
+RemoveEmptyChunksPlugin
+MergeDuplicateChunksPlugin
+FlagIncludedChunksPlugin
+OccurrenceOrderPlugin,
+FlagDependencyExportsPlugin
+FlagDependencyUsagePlugin
+
+TemplatedPathPlugin
+RecordIdsPlugin
+WarnCaseSensitiveModulesPlugin
+CachePlugin
