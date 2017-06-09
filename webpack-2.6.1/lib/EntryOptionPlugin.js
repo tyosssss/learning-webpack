@@ -8,6 +8,9 @@ const SingleEntryPlugin = require("./SingleEntryPlugin");
 const MultiEntryPlugin = require("./MultiEntryPlugin");
 const DynamicEntryPlugin = require("./DynamicEntryPlugin");
 
+/**
+ * 根据配置项config.entry , 注册对应的入口插件
+ */
 module.exports = class EntryOptionPlugin {
 	apply(compiler) {
 		compiler.plugin("entry-option", (context, entry) => {
@@ -18,6 +21,7 @@ module.exports = class EntryOptionPlugin {
 					return new SingleEntryPlugin(context, item, name);
 				}
 			}
+
 			if(typeof entry === "string" || Array.isArray(entry)) {
 				compiler.apply(itemToPlugin(entry, "main"));
 			} else if(typeof entry === "object") {
@@ -25,6 +29,7 @@ module.exports = class EntryOptionPlugin {
 			} else if(typeof entry === "function") {
 				compiler.apply(new DynamicEntryPlugin(context, entry));
 			}
+
 			return true;
 		});
 	}

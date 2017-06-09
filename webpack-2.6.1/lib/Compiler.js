@@ -246,6 +246,7 @@ Compiler.prototype.run = function(callback) {
 			self.readRecords(function(err) {
 				if(err) return callback(err);
 
+        // 开始编译
 				self.compile(function onCompiled(err, compilation) {
 					if(err) return callback(err);
 
@@ -407,21 +408,25 @@ Compiler.prototype.emitRecords = function emitRecords(callback) {
 };
 
 /**
+ * 读取编译记录文件的内容
  * @param {Function} callback
  */
 Compiler.prototype.readRecords = function readRecords(callback) {
 	var self = this;
 	
+  // 如果没有配置 , 那么不读取
 	if(!self.recordsInputPath) {
 		self.records = {};
 		return callback();
 	}
 
+  // 检查是否存在
 	self.inputFileSystem.stat(self.recordsInputPath, function(err) {
 		// It doesn't exist
 		// We can ignore self.
 		if(err) return callback();
 
+    // 读取内容
 		self.inputFileSystem.readFile(self.recordsInputPath, function(err, content) {
 			if(err) return callback(err);
 
@@ -475,63 +480,102 @@ Compiler.prototype.isChild = function() {
 };
 
 /**
- * 
+ * 创建一个Compilation实例
  */
 Compiler.prototype.createCompilation = function() {
 	return new Compilation(this);
 };
 
 /**
- * 
+ * 创建新的Compilation实例
+ * @param {CompilationParams} params
+ * @returns {Compilation}
  */
 Compiler.prototype.newCompilation = function(params) {
 	var compilation = this.createCompilation();
-	compilation.fileTimestamps = this.fileTimestamps;
+	
+  compilation.fileTimestamps = this.fileTimestamps;
 	compilation.contextTimestamps = this.contextTimestamps;
 	compilation.name = this.name;
 	compilation.records = this.records;
 	compilation.compilationDependencies = params.compilationDependencies;
-	this.applyPlugins("this-compilation", compilation, params);
+	
+  this.applyPlugins("this-compilation", compilation, params);
 	this.applyPlugins("compilation", compilation, params);
-	return compilation;
+	
+  return compilation;
 };
 
+/**
+ * 创建普通模块的工厂实例
+ * @returns {NormalModuleFactory}
+ */
 Compiler.prototype.createNormalModuleFactory = function() {
-	var normalModuleFactory = new NormalModuleFactory(this.options.context, this.resolvers, this.options.module || {});
+	var normalModuleFactory = new NormalModuleFactory(
+    this.options.context, 
+    this.resolvers, 
+    this.options.module || {}
+  );
+
 	this.applyPlugins("normal-module-factory", normalModuleFactory);
+
 	return normalModuleFactory;
 };
 
+/**
+ * 创建上下文模块的工厂实例
+ * @returns {ContextModuleFactory}
+ */
 Compiler.prototype.createContextModuleFactory = function() {
-	var contextModuleFactory = new ContextModuleFactory(this.resolvers, this.inputFileSystem);
+	var contextModuleFactory = new ContextModuleFactory(
+    this.resolvers, 
+    this.inputFileSystem
+  );
+
 	this.applyPlugins("context-module-factory", contextModuleFactory);
+
 	return contextModuleFactory;
 };
 
+/**
+ * 创建Compilation需要的参数
+ * @returns {Object} {normalModuleFactory , contextModuleFactory , compilationDependencies}
+ */
 Compiler.prototype.newCompilationParams = function() {
 	var params = {
 		normalModuleFactory: this.createNormalModuleFactory(),
 		contextModuleFactory: this.createContextModuleFactory(),
 		compilationDependencies: []
 	};
+
 	return params;
 };
 
+/**
+ * 编译
+ * @param {Function} callback 回调函数
+ */
 Compiler.prototype.compile = function(callback) {
 	var self = this;
 	var params = self.newCompilationParams();
+
 	self.applyPluginsAsync("before-compile", params, function(err) {
 		if(err) return callback(err);
 
+    // pub "compile"
 		self.applyPlugins("compile", params);
 
+    // 创建一个新的Comp
 		var compilation = self.newCompilation(params);
 
+    // pub "make"
 		self.applyPluginsParallel("make", compilation, function(err) {
 			if(err) return callback(err);
 
+      // 编译完成
 			compilation.finish();
 
+      // 
 			compilation.seal(function(err) {
 				if(err) return callback(err);
 

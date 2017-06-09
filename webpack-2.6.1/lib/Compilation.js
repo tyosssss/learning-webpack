@@ -57,11 +57,17 @@ class Compilation extends Tapable {
 		this.profile = options && options.profile;
 		this.performance = options && options.performance;
 
+    //
+    // 创建模板实例
+    //
 		this.mainTemplate = new MainTemplate(this.outputOptions);
 		this.chunkTemplate = new ChunkTemplate(this.outputOptions);
 		this.hotUpdateChunkTemplate = new HotUpdateChunkTemplate(this.outputOptions);
 		this.moduleTemplate = new ModuleTemplate(this.outputOptions);
 
+    //
+    // 初始化属性
+    //
 		this.entries = [];
 		this.preparedChunks = [];
 		this.entrypoints = {};
@@ -82,6 +88,13 @@ class Compilation extends Tapable {
 		this.dependencyTemplates = new Map();
 	}
 
+  /**
+   * 
+   * 
+   * @returns 
+   * 
+   * @memberof Compilation
+   */
 	getStats() {
 		return new Stats(this);
 	}
@@ -526,8 +539,14 @@ class Compilation extends Tapable {
 		});
 	}
 
+  /**
+   * 编译完成
+   * 
+   * @memberof Compilation
+   */
 	finish() {
 		const modules = this.modules;
+    
 		this.applyPlugins1("finish-modules", modules);
 
 		for(let index = 0; index < modules.length; index++) {
@@ -545,11 +564,22 @@ class Compilation extends Tapable {
 		this.modules.forEach(module => module.unseal());
 	}
 
+  /**
+   * 
+   * 
+   * @param {Function} callback 回调函数
+   * 
+   * @memberof Compilation
+   */
 	seal(callback) {
 		const self = this;
-		self.applyPlugins0("seal");
+		
+    // emit "seal"
+    self.applyPlugins0("seal");
+
 		self.nextFreeModuleIndex = 0;
 		self.nextFreeModuleIndex2 = 0;
+
 		self.preparedChunks.forEach(preparedChunk => {
 			const module = preparedChunk.module;
 			const chunk = self.addChunk(preparedChunk.name, module);
@@ -661,6 +691,14 @@ class Compilation extends Tapable {
 		});
 	}
 
+  /**
+   * 报告依赖错误或警告
+   * 
+   * @param {any} module 
+   * @param {any} blocks 
+   * 
+   * @memberof Compilation
+   */
 	reportDependencyErrorsAndWarnings(module, blocks) {
 		for(let indexBlock = 0; indexBlock < blocks.length; indexBlock++) {
 			const block = blocks[indexBlock];
@@ -693,6 +731,16 @@ class Compilation extends Tapable {
 		}
 	}
 
+  /**
+   * 
+   * 
+   * @param {any} name 
+   * @param {any} module 
+   * @param {any} loc 
+   * @returns 
+   * 
+   * @memberof Compilation
+   */
 	addChunk(name, module, loc) {
 		if(name) {
 			if(Object.prototype.hasOwnProperty.call(this.namedChunks, name)) {
@@ -711,6 +759,13 @@ class Compilation extends Tapable {
 		return chunk;
 	}
 
+  /**
+   * 
+   * 
+   * @param {any} module 
+   * 
+   * @memberof Compilation
+   */
 	assignIndex(module) {
 		const _this = this;
 
@@ -778,6 +833,13 @@ class Compilation extends Tapable {
 		}
 	}
 
+  /**
+   * 
+   * 
+   * @param {any} module 
+   * 
+   * @memberof Compilation
+   */
 	assignDepth(module) {
 		function assignDepthToModule(module, depth) {
 			// enter module
@@ -824,6 +886,14 @@ class Compilation extends Tapable {
 		}
 	}
 
+  /**
+   * 
+   * 
+   * @param {any} block 
+   * @param {any} chunk 
+   * 
+   * @memberof Compilation
+   */
 	processDependenciesBlockForChunk(block, chunk) {
 		const iteratorBlock = b => {
 			let c;
@@ -875,6 +945,14 @@ class Compilation extends Tapable {
 		}
 	}
 
+  /**
+   * 
+   * 
+   * @param {any} block 
+   * @param {any} chunk 
+   * 
+   * @memberof Compilation
+   */
 	removeChunkFromDependencies(block, chunk) {
 		const iteratorDependency = d => {
 			if(!d.module) {
@@ -907,6 +985,12 @@ class Compilation extends Tapable {
 		}
 	}
 
+  /**
+   * 
+   * 
+   * 
+   * @memberof Compilation
+   */
 	applyModuleIds() {
 		let unusedIds = [];
 		let nextFreeModuleId = 0;
@@ -965,6 +1049,12 @@ class Compilation extends Tapable {
 		}
 	}
 
+  /**
+   * 
+   * 
+   * 
+   * @memberof Compilation
+   */
 	applyChunkIds() {
 		const unusedIds = [];
 		let nextFreeChunkId = 0;
@@ -1012,6 +1102,12 @@ class Compilation extends Tapable {
 		}
 	}
 
+  /**
+   * 
+   * 
+   * 
+   * @memberof Compilation
+   */
 	sortItemsWithModuleIds() {
 		this.modules.sort(byId);
 
@@ -1026,6 +1122,12 @@ class Compilation extends Tapable {
 		}
 	}
 
+  /**
+   * 
+   * 
+   * 
+   * @memberof Compilation
+   */
 	sortItemsWithChunkIds() {
 		this.chunks.sort(byId);
 
@@ -1040,6 +1142,12 @@ class Compilation extends Tapable {
 		}
 	}
 
+  /**
+   * 
+   * 
+   * 
+   * @memberof Compilation
+   */
 	summarizeDependencies() {
 		function filterDups(array) {
 			const newArray = [];
@@ -1092,6 +1200,12 @@ class Compilation extends Tapable {
 		this.missingDependencies = filterDups(this.missingDependencies);
 	}
 
+  /**
+   * 
+   * 
+   * 
+   * @memberof Compilation
+   */
 	createHash() {
 		const outputOptions = this.outputOptions;
 		const hashFunction = outputOptions.hashFunction;

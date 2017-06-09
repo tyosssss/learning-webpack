@@ -42,15 +42,23 @@ function identToLoaderRequest(resultString) {
 	}
 }
 
+/**
+ * 
+ * @class NormalModuleFactory
+ * @extends {Tapable}
+ */
 class NormalModuleFactory extends Tapable {
 	constructor(context, resolvers, options) {
 		super();
 		this.resolvers = resolvers;
 		this.ruleSet = new RuleSet(options.rules || options.loaders);
-		this.cachePredicate = typeof options.unsafeCache === "function" ? options.unsafeCache : Boolean.bind(null, options.unsafeCache);
+		this.cachePredicate = typeof options.unsafeCache === "function" 
+      ? options.unsafeCache 
+      : Boolean.bind(null, options.unsafeCache);
 		this.context = context || "";
 		this.parserCache = {};
-		this.plugin("factory", function() {
+		
+    this.plugin("factory", function() {
 			/* beautify preserve:start */
             // js-beautify consider to concat "return" and "("
             // but it сontradicts eslint rule (keyword-spacing)
@@ -101,6 +109,7 @@ class NormalModuleFactory extends Tapable {
 				});
 			};
 		});
+    
 		this.plugin("resolver", function() {
 			/* beautify preserve:start */
             // js-beautify consider to concat "return" and "("

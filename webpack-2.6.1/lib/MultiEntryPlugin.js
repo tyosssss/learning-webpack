@@ -23,6 +23,7 @@ module.exports = class MultiEntryPlugin {
 			compilation.dependencyFactories.set(MultiEntryDependency, multiModuleFactory);
 			compilation.dependencyFactories.set(SingleEntryDependency, normalModuleFactory);
 		});
+    
 		compiler.plugin("make", (compilation, callback) => {
 			const dep = MultiEntryPlugin.createDependency(this.entries, this.name);
 			compilation.addEntry(this.context, dep, this.name, callback);

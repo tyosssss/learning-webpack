@@ -49,6 +49,7 @@ class Dependency {
 		return compareLocations(a.loc, b.loc);
 	}
 }
+
 Dependency.compare = (a, b) => compareLocations(a.loc, b.loc);
 
 module.exports = Dependency;
