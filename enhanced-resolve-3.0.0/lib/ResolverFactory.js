@@ -101,7 +101,9 @@ exports.createResolver = function(options) {
 	//// options processing ////
 
 	if(!resolver) {
-		resolver = new Resolver(useSyncFileSystemCalls ? new SyncAsyncFileSystemDecorator(fileSystem) : fileSystem)
+		resolver = new Resolver(useSyncFileSystemCalls 
+			? new SyncAsyncFileSystemDecorator(fileSystem) 
+			: fileSystem)
 	}
 
 	extensions = [].concat(extensions);

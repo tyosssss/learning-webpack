@@ -388,7 +388,9 @@ module.exports = class RuleSet {
 			rule.use.forEach((use) => {
 				result.push({
 					type: "use",
-					value: typeof use === "function" ? RuleSet.normalizeUseItemFunction(use, data) : use,
+					value: typeof use === "function" 
+						? RuleSet.normalizeUseItemFunction(use, data) 
+						: use,
 					enforce: rule.enforce
 				});
 			});

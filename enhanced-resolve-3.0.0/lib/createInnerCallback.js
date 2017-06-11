@@ -2,8 +2,17 @@
 	MIT License http://www.opensource.org/licenses/mit-license.php
 	Author Tobias Koppers @sokra
 */
+
+/**
+ * 包装一个自带日志记录的回调函数
+ * @param {Function} callback
+ * @param {log,missing,stack} options
+ * @param {String} message 消息
+ * @param {Boolean} messageOptional
+ */
 module.exports = function createInnerCallback(callback, options, message, messageOptional) {
 	var log = options.log;
+	
 	if(!log) {
 		if(options.stack !== callback.stack) {
 			var callbackWrapper = function callbackWrapper() {
@@ -11,8 +20,10 @@ module.exports = function createInnerCallback(callback, options, message, messag
 			}
 			callbackWrapper.stack = options.stack;
 			callbackWrapper.missing = options.missing;
+
 			return callbackWrapper;
 		}
+
 		return callback;
 	}
 
@@ -31,11 +42,13 @@ module.exports = function createInnerCallback(callback, options, message, messag
 		return callback.apply(this, arguments);
 
 	}
+
 	var theLog = [];
 	loggingCallbackWrapper.log = function writeLog(msg) {
 		theLog.push(msg);
 	};
 	loggingCallbackWrapper.stack = options.stack;
 	loggingCallbackWrapper.missing = options.missing;
+	
 	return loggingCallbackWrapper;
 }

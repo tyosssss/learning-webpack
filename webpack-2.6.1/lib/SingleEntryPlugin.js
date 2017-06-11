@@ -23,7 +23,8 @@ class SingleEntryPlugin {
 		});
 
     /**
-     * 
+     * 1. 创建单入口模块依赖
+		 * 2. 将入口模块依赖添加到compilation中
      */
 		compiler.plugin("make", (compilation, callback) => {
 			const dep = SingleEntryPlugin.createDependency(this.entry, this.name);

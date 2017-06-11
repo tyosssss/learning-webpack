@@ -340,7 +340,9 @@ Tapable.prototype.applyPluginsAsyncSeriesBailResult1 = function applyPluginsAsyn
  * @param {Function} callback 回调函数
  */
 Tapable.prototype.applyPluginsAsyncWaterfall = function applyPluginsAsyncWaterfall(name, init, callback) {
-	if(!this._plugins[name] || this._plugins[name].length === 0) return callback(null, init);
+	if(!this._plugins[name] || this._plugins[name].length === 0) return 
+		callback(null, init);
+		
 	var plugins = this._plugins[name];
 	var i = 0;
 	var _this = this;

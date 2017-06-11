@@ -7,7 +7,7 @@
       "name": "Launch webpack",
       "program": "${workspaceRoot}/seed.js",
       "args": [
-        "examples\\commons-chunk-plugin\\example1.js"
+        "examples/example.js"
       ]
     },
     {

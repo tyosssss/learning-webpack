@@ -172,6 +172,14 @@ class NormalModule extends Module {
 		return new OriginalSource(source, identifier);
 	}
 
+	/**
+	 * 执行构建操作
+	 * @param {Object} options 配置
+	 * @param {Compilation} compilation 编译对象
+	 * @param {Resolver} resolver 路径解析器
+	 * @param {FileSystem} fs 文件系统
+	 * @param {Function} callback 回调函数
+	 */
 	doBuild(options, compilation, resolver, fs, callback) {
 		this.cacheable = false;
 		const loaderContext = this.createLoaderContext(resolver, options, compilation, fs);
@@ -256,6 +264,15 @@ class NormalModule extends Module {
 		return false;
 	}
 
+	/** 
+	 * 构建模块
+	 * @param {Object} options 配置
+	 * @param {Compilation} compilation 编译对象
+	 * @param {Resolver} resolver 路径解析器
+	 * @param {FileSystem} fs 文件系统
+	 * @param {Function} callback 回调函数
+	 * @returns 
+	 */
 	build(options, compilation, resolver, fs, callback) {
 		this.buildTimestamp = Date.now();
 		this.built = true;

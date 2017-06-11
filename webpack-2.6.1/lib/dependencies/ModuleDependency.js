@@ -12,6 +12,11 @@ class ModuleDependency extends Dependency {
 		this.userRequest = request;
 	}
 
+	/**
+	 * 判断other是否与依赖是相同的资源 ( 类型相同 && 请求路径 )
+	 * @param {Any} other
+	 * @returns {Boolean} 
+	 */
 	isEqualResource(other) {
 		if(!(other instanceof ModuleDependency))
 			return false;
