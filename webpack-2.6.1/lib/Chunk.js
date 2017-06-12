@@ -58,6 +58,12 @@ class Chunk {
 		return this.entrypoints[0].chunks[0] === this;
 	}
 
+  /**
+   * 是否是初始块 -- 有入口点的块
+   * 
+   * @returns {Boolean}
+   * @memberof Chunk
+   */
 	isInitial() {
 		return this.entrypoints.length > 0;
 	}
