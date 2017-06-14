@@ -45,7 +45,10 @@ class WebpackOptionsDefaulter extends OptionsDefaulter {
 		this.set("output.filename", "[name].js");
 		this.set("output.chunkFilename", "make", (options) => {
 			const filename = options.output.filename;
-			return filename.indexOf("[name]") >= 0 ? filename.replace("[name]", "[id]") : "[id]." + filename;
+
+			return filename.indexOf("[name]") >= 0 
+        ? filename.replace("[name]", "[id]") 
+        : "[id]." + filename;
 		});
 		this.set("output.library", "");
 		this.set("output.hotUpdateFunction", "make", (options) => {
