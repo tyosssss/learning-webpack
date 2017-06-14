@@ -11,13 +11,14 @@ const CachedInputFileSystem = require("enhanced-resolve/lib/CachedInputFileSyste
 
 class NodeEnvironmentPlugin {
 	apply(compiler) {
-		compiler.inputFileSystem = new CachedInputFileSystem(new NodeJsInputFileSystem(), 60000);
-		const inputFileSystem = compiler.inputFileSystem;
+		const inputFileSystem = compiler.inputFileSystem = new CachedInputFileSystem(new NodeJsInputFileSystem(), 60000);
 		compiler.outputFileSystem = new NodeOutputFileSystem();
 		compiler.watchFileSystem = new NodeWatchFileSystem(compiler.inputFileSystem);
+
 		compiler.plugin("before-run", (compiler, callback) => {
-			if(compiler.inputFileSystem === inputFileSystem)
+			if (compiler.inputFileSystem === inputFileSystem)
 				inputFileSystem.purge();
+			
 			callback();
 		});
 	}
