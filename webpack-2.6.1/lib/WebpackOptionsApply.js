@@ -54,6 +54,7 @@ class WebpackOptionsApply extends OptionsApply {
 
 	process(options, compiler) {
 		let ExternalsPlugin;
+		
 		compiler.outputPath = options.output.path;
 		compiler.recordsInputPath = options.recordsInputPath || options.recordsPath;
 		compiler.recordsOutputPath = options.recordsOutputPath || options.recordsPath;
@@ -192,7 +193,8 @@ class WebpackOptionsApply extends OptionsApply {
     /**
      * 处理 output.library/libraryTarget -- 根据配置加载相关的插件
      */
-		if(options.output.library || options.output.libraryTarget !== "var") {
+		if(options.output.library || 
+			 options.output.libraryTarget !== "var") {
 			let LibraryTemplatePlugin = require("./LibraryTemplatePlugin");
 			compiler.apply(new LibraryTemplatePlugin(options.output.library, options.output.libraryTarget, options.output.umdNamedDefine, options.output.auxiliaryComment || ""));
 		}
