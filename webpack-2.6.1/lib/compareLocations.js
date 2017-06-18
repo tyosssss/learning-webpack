@@ -3,6 +3,13 @@
 	Author Tobias Koppers @sokra
 */
 "use strict";
+
+/**
+ * 比较位置
+ * @param {String|Object} a 
+ * @param {String|Object} b
+ * @returns {Number} -1 -- a < b; 1 -- a >b; 0 -- a = b 
+ */
 module.exports = function compareLocations(a, b) {
 	if(typeof a === "string") {
 		if(typeof b === "string") {

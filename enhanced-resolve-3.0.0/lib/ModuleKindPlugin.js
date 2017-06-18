@@ -5,6 +5,11 @@
 var assign = require("object-assign");
 var createInnerCallback = require("./createInnerCallback");
 
+/**
+ * 过滤掉非模块请求路径 , 专注处理模块请求路径
+ * @param {*} source 
+ * @param {*} target 
+ */
 function ModuleKindPlugin(source, target) {
 	this.source = source;
 	this.target = target;
@@ -13,10 +18,13 @@ module.exports = ModuleKindPlugin;
 
 ModuleKindPlugin.prototype.apply = function(resolver) {
 	var target = this.target;
+	
 	resolver.plugin(this.source, function(request, callback) {
 		if(!request.module) return callback();
+		
 		var obj = assign({}, request);
 		delete obj.module;
+
 		resolver.doResolve(target, obj, "resolve as module", createInnerCallback(function(err, result) {
 			if(arguments.length > 0) return callback(err, result);
 

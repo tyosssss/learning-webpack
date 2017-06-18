@@ -14,9 +14,14 @@ class Dependency {
 		return false;
 	}
 
-	// Returns the referenced module and export
+	/**
+	 * Returns the referenced module and export
+	 * @returns {Object} {module , importedNames }
+	 */
 	getReference() {
-		if(!this.module) return null;
+		if(!this.module) 
+			return null;
+		
 		return {
 			module: this.module,
 			importedNames: true, // true: full object, false: only sideeffects/no export, array of strings: the exports with this names

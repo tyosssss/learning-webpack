@@ -54,23 +54,23 @@ class WebpackOptionsApply extends OptionsApply {
 
 	process(options, compiler) {
 		let ExternalsPlugin;
-		
+
 		compiler.outputPath = options.output.path;
 		compiler.recordsInputPath = options.recordsInputPath || options.recordsPath;
 		compiler.recordsOutputPath = options.recordsOutputPath || options.recordsPath;
 		compiler.name = options.name;
 		compiler.dependencies = options.dependencies;
-		
+
     /**
      * 处理target -- 根据不同的target , 注册不同的target下的插件
      */
-    if(typeof options.target === "string") {
+		if (typeof options.target === "string") {
 			let JsonpTemplatePlugin;
 			let NodeSourcePlugin;
 			let NodeTargetPlugin;
 			let NodeTemplatePlugin;
 
-			switch(options.target) {
+			switch (options.target) {
 				case "web":
 					JsonpTemplatePlugin = require("./JsonpTemplatePlugin");
 					NodeSourcePlugin = require("./node/NodeSourcePlugin");
@@ -184,7 +184,7 @@ class WebpackOptionsApply extends OptionsApply {
 				default:
 					throw new Error("Unsupported target '" + options.target + "'.");
 			}
-		} else if(options.target !== false) {
+		} else if (options.target !== false) {
 			options.target(compiler);
 		} else {
 			throw new Error("Unsupported target '" + options.target + "'.");
@@ -193,8 +193,8 @@ class WebpackOptionsApply extends OptionsApply {
     /**
      * 处理 output.library/libraryTarget -- 根据配置加载相关的插件
      */
-		if(options.output.library || 
-			 options.output.libraryTarget !== "var") {
+		if (options.output.library ||
+			options.output.libraryTarget !== "var") {
 			let LibraryTemplatePlugin = require("./LibraryTemplatePlugin");
 			compiler.apply(new LibraryTemplatePlugin(options.output.library, options.output.libraryTarget, options.output.umdNamedDefine, options.output.auxiliaryComment || ""));
 		}
@@ -202,11 +202,11 @@ class WebpackOptionsApply extends OptionsApply {
     /**
      * 处理 externals -- 根据配置加载相关的插件
      */
-		if(options.externals) {
+		if (options.externals) {
 			ExternalsPlugin = require("./ExternalsPlugin");
 			compiler.apply(new ExternalsPlugin(options.output.libraryTarget, options.externals));
 		}
-    
+
     /**
      * 处理 devtools -- 根据配置加载相关的插件
      */
@@ -214,7 +214,7 @@ class WebpackOptionsApply extends OptionsApply {
 		let legacy;
 		let modern;
 		let comment;
-		if(options.devtool && (options.devtool.indexOf("sourcemap") >= 0 || options.devtool.indexOf("source-map") >= 0)) {
+		if (options.devtool && (options.devtool.indexOf("sourcemap") >= 0 || options.devtool.indexOf("source-map") >= 0)) {
 			const hidden = options.devtool.indexOf("hidden") >= 0;
 			const inline = options.devtool.indexOf("inline") >= 0;
 			const evalWrapped = options.devtool.indexOf("eval") >= 0;
@@ -225,8 +225,8 @@ class WebpackOptionsApply extends OptionsApply {
 			modern = options.devtool.indexOf("#") >= 0;
 			comment = legacy && modern ? "\n/*\n//@ source" + "MappingURL=[url]\n//# source" + "MappingURL=[url]\n*/" :
 				legacy ? "\n/*\n//@ source" + "MappingURL=[url]\n*/" :
-				modern ? "\n//# source" + "MappingURL=[url]" :
-				null;
+					modern ? "\n//# source" + "MappingURL=[url]" :
+						null;
 			let Plugin = evalWrapped ? EvalSourceMapDevToolPlugin : SourceMapDevToolPlugin;
 			compiler.apply(new Plugin({
 				filename: inline ? null : options.output.sourceMapFilename,
@@ -238,22 +238,26 @@ class WebpackOptionsApply extends OptionsApply {
 				lineToLine: options.output.devtoolLineToLine,
 				noSources: noSources,
 			}));
-		} else if(options.devtool && options.devtool.indexOf("eval") >= 0) {
+		} else if (options.devtool && options.devtool.indexOf("eval") >= 0) {
 			legacy = options.devtool.indexOf("@") >= 0;
 			modern = options.devtool.indexOf("#") >= 0;
 			comment = legacy && modern ? "\n//@ sourceURL=[url]\n//# sourceURL=[url]" :
 				legacy ? "\n//@ sourceURL=[url]" :
-				modern ? "\n//# sourceURL=[url]" :
-				null;
+					modern ? "\n//# sourceURL=[url]" :
+						null;
 			compiler.apply(new EvalDevToolModulePlugin(comment, options.output.devtoolModuleFilenameTemplate));
 		}
 
-    // sub 入口块插件
+		// sub 入口块插件
 		compiler.apply(new EntryOptionPlugin());
 
 		// pub entry-option
-		compiler.applyPluginsBailResult("entry-option", options.context, options.entry);
-		
+		compiler.applyPluginsBailResult(
+			"entry-option",
+			options.context,
+			options.entry
+		);
+
 		// sub 插件
 		compiler.apply(
 			new CompatibilityPlugin(),
@@ -286,7 +290,7 @@ class WebpackOptionsApply extends OptionsApply {
 		);
 
 		// 处理 performance -- 注册相关插件
-		if(options.performance) {
+		if (options.performance) {
 			compiler.apply(new SizeLimitsPlugin(options.performance));
 		}
 
@@ -297,18 +301,18 @@ class WebpackOptionsApply extends OptionsApply {
 		compiler.apply(new WarnCaseSensitiveModulesPlugin());
 
 		// 处理 cache - 注册相关插件
-		if(options.cache) {
+		if (options.cache) {
 			let CachePlugin = require("./CachePlugin");
-			compiler.apply(new CachePlugin(typeof options.cache === "object" 
-				? options.cache 
+			compiler.apply(new CachePlugin(typeof options.cache === "object"
+				? options.cache
 				: null));
 		}
 
 		compiler.applyPlugins("after-plugins", compiler);
 
-		if(!compiler.inputFileSystem) 
+		if (!compiler.inputFileSystem)
 			throw new Error("No input filesystem provided");
-		
+
 		// 创建普通模块的解析器
 		compiler.resolvers.normal = ResolverFactory.createResolver(Object.assign({
 			fileSystem: compiler.inputFileSystem
@@ -327,7 +331,7 @@ class WebpackOptionsApply extends OptionsApply {
 
 		// pub after-resolvers
 		compiler.applyPlugins("after-resolvers", compiler);
-		
+
 		return options;
 	}
 }

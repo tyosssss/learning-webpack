@@ -25,7 +25,11 @@ module.exports = class EntryOptionPlugin {
 			if(typeof entry === "string" || Array.isArray(entry)) {
 				compiler.apply(itemToPlugin(entry, "main"));
 			} else if(typeof entry === "object") {
-				Object.keys(entry).forEach(name => compiler.apply(itemToPlugin(entry[name], name)));
+				Object
+					.keys(entry)
+					.forEach(name => 
+						compiler.apply(itemToPlugin(entry[name], name))
+					);
 			} else if(typeof entry === "function") {
 				compiler.apply(new DynamicEntryPlugin(context, entry));
 			}

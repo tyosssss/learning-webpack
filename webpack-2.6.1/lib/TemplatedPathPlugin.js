@@ -4,7 +4,8 @@
 */
 "use strict";
 
-const REGEXP_HASH = /\[hash(?::(\d+))?\]/gi,
+const 
+	REGEXP_HASH = /\[hash(?::(\d+))?\]/gi,
 	REGEXP_CHUNKHASH = /\[chunkhash(?::(\d+))?\]/gi,
 	REGEXP_NAME = /\[name\]/gi,
 	REGEXP_ID = /\[id\]/gi,
@@ -14,7 +15,8 @@ const REGEXP_HASH = /\[hash(?::(\d+))?\]/gi,
 
 // Using global RegExp for .test is dangerous
 // We use a normal RegExp instead of .test
-const REGEXP_HASH_FOR_TEST = new RegExp(REGEXP_HASH.source, "i"),
+const 
+	REGEXP_HASH_FOR_TEST = new RegExp(REGEXP_HASH.source, "i"),
 	REGEXP_CHUNKHASH_FOR_TEST = new RegExp(REGEXP_CHUNKHASH.source, "i"),
 	REGEXP_NAME_FOR_TEST = new RegExp(REGEXP_NAME.source, "i");
 

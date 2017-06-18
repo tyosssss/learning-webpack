@@ -11,6 +11,7 @@ function UnsafeCachePlugin(source, filterPredicate, cache, target) {
 	this.cache = cache || {};
 	this.target = target;
 }
+
 module.exports = UnsafeCachePlugin;
 
 function getCacheId(request) {
@@ -22,21 +23,41 @@ function getCacheId(request) {
 	});
 }
 
-UnsafeCachePlugin.prototype.apply = function(resolver) {
+UnsafeCachePlugin.prototype.apply = function (resolver) {
 	var filterPredicate = this.filterPredicate;
 	var cache = this.cache;
 	var target = this.target;
-	resolver.plugin(this.source, function(request, callback) {
-		if(!filterPredicate(request)) return callback();
-		var cacheId = getCacheId(request);
-		var cacheEntry = cache[cacheId];
-		if(cacheEntry) {
-			return callback(null, cacheEntry);
-		}
-		resolver.doResolve(target, request, null, createInnerCallback(function(err, result) {
-			if(err) return callback(err);
-			if(result) return callback(null, cache[cacheId] = result);
-			callback();
-		}, callback));
-	});
+
+	resolver.plugin(
+		this.source,
+		function onResolve(request, callback) {
+
+			// 如果返回false , 那么不缓存
+			if (!filterPredicate(request)) return callback();
+
+			var cacheId = getCacheId(request);
+			var cacheEntry = cache[cacheId];
+
+			// 已经缓存 , 直接使用缓存
+			if (cacheEntry) {
+				return callback(null, cacheEntry);
+			}
+
+			resolver.doResolve(
+				target,
+				request,
+				null,
+
+				/**
+				 * 
+				 * @param {Error} err 
+				 * @param {ResolverRequest} result 
+				 */
+				createInnerCallback(function done(err, result) {
+					if (err) return callback(err);
+					if (result) return callback(null, cache[cacheId] = result);
+
+					callback();
+				}, callback));
+		});
 };

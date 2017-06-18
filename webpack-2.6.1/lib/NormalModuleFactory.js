@@ -20,7 +20,15 @@ const RuleSet = require("./RuleSet");
  */
 
 /**
- * resourceResolveData
+ * @typedef {Object} ResolveParams
+ * @property {issuer:String,compiler:String} contextInfo 上下文信息
+ * @property {String} context 上下文路径
+ * @property {String} request 模块的请求路径
+ * @property {Dependency[]} dependencies 模块的依赖,即该模块依赖的模块 ( 包括自身 )
+ */
+
+/**
+ * ResourceResolveData
  * 
  * context
  *   compiler:undefined
@@ -35,48 +43,6 @@ const RuleSet = require("./RuleSet");
  * query:""
  */
 
-
-/**
- * 
- * @param {*} data 
- */
-function loaderToIdent(data) {
-	if (!data.options)
-		return data.loader;
-	if (typeof data.options === "string")
-		return data.loader + "?" + data.options;
-	if (typeof data.options !== "object")
-		throw new Error("loader options must be string or object");
-	if (data.ident)
-		return data.loader + "??" + data.ident;
-	return data.loader + "?" + JSON.stringify(data.options);
-}
-
-/**
- * 识别加载器请求
- * @param {Array[]} resultString 请求字符串数组
- * @returns {loader , options} 返回识别的加载器请求
- */
-function identToLoaderRequest(resultString) {
-	const idx = resultString.indexOf("?");
-	let options;
-
-	// has querystring
-	if (idx >= 0) {
-		options = resultString.substr(idx + 1);
-		resultString = resultString.substr(0, idx);
-
-		return {
-			loader: resultString,
-			options
-		};
-	} else {
-		return {
-			loader: resultString
-		};
-	}
-}
-
 /**
  * 
  * @class NormalModuleFactory
@@ -85,28 +51,65 @@ function identToLoaderRequest(resultString) {
 class NormalModuleFactory extends Tapable {
 	constructor(context, resolvers, options) {
 		super();
+
+		/**
+		 * 路径解析器
+		 * @type {Object}
+		 */
 		this.resolvers = resolvers;
+
+		/**
+		 * 规则集合
+		 * @type {RuleSet}
+		 */
 		this.ruleSet = new RuleSet(options.rules || options.loaders);
+
+		/**
+		 * 缓存判断函数
+		 * @type {Function}
+		 */
 		this.cachePredicate = typeof options.unsafeCache === "function"
 			? options.unsafeCache
 			: Boolean.bind(null, options.unsafeCache);
+
+		/**
+		 * 上下文的路径
+		 * @type {String}
+		 */
 		this.context = context || "";
+
+		/**
+		 * 
+		 * @type Map<>
+		 */
 		this.parserCache = {};
 
+		// 
+		// 创建模块工厂
+		//
 		this.plugin("factory", function () {
 			/* beautify preserve:start */
 			// js-beautify consider to concat "return" and "("
 			// but it сontradicts eslint rule (keyword-spacing)
+
+			/**
+			 * factory
+			 * @param {ResolveParams} params 参数
+			 * @param {Function} calback 回调函数
+			 */
 			return (result, callback) => {
 				/* beautify preserve:end */
 
-				// 创建resolve
+				// 创建resolvel
 				let resolver = this.applyPluginsWaterfall0("resolver", null);
 
 				// Ignored
-				if (!resolver)
-					return callback();
+				if (!resolver) return callback();
 
+				/**
+				 * @param {ResolveParams} 解析器参数
+			 	 * @param {Function} callback 回调函数
+				 */
 				resolver(result, (err, data) => {
 					if (err) return callback(err);
 
@@ -114,8 +117,7 @@ class NormalModuleFactory extends Tapable {
 					if (!data) return callback();
 
 					// direct module
-					if (typeof data.source === "function")
-						return callback(null, data);
+					if (typeof data.source === "function") return callback(null, data);
 
 					this.applyPluginsAsyncWaterfall("after-resolve", data, (err, result) => {
 						if (err) return callback(err);
@@ -125,6 +127,7 @@ class NormalModuleFactory extends Tapable {
 							return callback();
 
 						let createdModule = this.applyPluginsBailResult("create-module", result);
+
 						if (!createdModule) {
 
 							if (!result.request) {
@@ -149,26 +152,42 @@ class NormalModuleFactory extends Tapable {
 			};
 		});
 
+		//
+		// 创建解析器
+		//
 		this.plugin("resolver", function () {
 			/* beautify preserve:start */
 			// js-beautify consider to concat "return" and "("
 			// but it сontradicts eslint rule (keyword-spacing)
+
+			/**
+			 * resolver
+			 * @param {ResolveParams} 解析器参数
+			 * @param {Function} callback 回调函数
+			 */
 			return (data, callback) => {
 				/* beautify preserve:end */
 				const contextInfo = data.contextInfo;
 				const context = data.context;
 				const request = data.request;
 
-				const noPrePostAutoLoaders = /^!!/.test(request);	// !!
-				const noAutoLoaders = /^-?!/.test(request);				// -! , !
-				const noPostAutoLoaders = /^-!/.test(request);		// -!
+				const noPrePostAutoLoaders = /^!!/.test(request);	// 匹配 !!
+				const noAutoLoaders = /^-?!/.test(request);				// 匹配 -! , !
+				const noPostAutoLoaders = /^-!/.test(request);		// 匹配 -!
 
+				/**
+				 * 路径元素
+				 * 
+				 * [{loader,options} , {loader , options} , ... , resource ]
+				 * 
+				 * @type {String[]}
+				 */
 				let elements = request
 					.replace(/^-?!+/, "")	// 过滤post 加载器
 					.replace(/!!+/g, "!")	// 过滤pre  加载器
 					.split("!");
 
-				// 获得资源
+				// 获得资源路径
 				let resource = elements.pop();
 
 				// 根据识别的加载器信息 , 重置元素信息
@@ -180,8 +199,8 @@ class NormalModuleFactory extends Tapable {
 				 * 3. 解析 pre-loader , loader , post-loader request
 				 */
 				asyncLib.parallel([
+					// 解析所有Loader路径
 					callback => {
-						// 解析loader
 						this.resolveRequestArray(
 							contextInfo,
 							context,
@@ -195,16 +214,20 @@ class NormalModuleFactory extends Tapable {
 							return callback(null, {
 								resource
 							});
-						
+
 						// debugger
 						// 解析资源
-						this.resolvers.normal.resolve(contextInfo, context, resource, (err, resource, resourceResolveData) => {
-							if (err) return callback(err);
-							callback(null, {
-								resourceResolveData,
-								resource
+						this.resolvers.normal.resolve(
+							contextInfo,
+							context,
+							resource,
+							(err, resource, resourceResolveData) => {
+								if (err) return callback(err);
+								callback(null, {
+									resourceResolveData,
+									resource
+								});
 							});
-						});
 					}
 				], (err, results) => {
 					if (err) return callback(err);
@@ -233,7 +256,7 @@ class NormalModuleFactory extends Tapable {
 							)
 						);
 					}
-					
+
 					// debugger
 					const userRequest = loaders
 						.map(loaderToIdent)
@@ -243,11 +266,12 @@ class NormalModuleFactory extends Tapable {
 					let resourcePath = resource;
 					let resourceQuery = "";
 					const queryIndex = resourcePath.indexOf("?");
+
 					if (queryIndex >= 0) {
 						resourceQuery = resourcePath.substr(queryIndex);
 						resourcePath = resourcePath.substr(0, queryIndex);
 					}
-					
+
 					// debugger
 					const result = this.ruleSet.exec({
 						resource: resourcePath,
@@ -255,13 +279,15 @@ class NormalModuleFactory extends Tapable {
 						issuer: contextInfo.issuer,
 						compiler: contextInfo.compiler
 					});
+
 					const settings = {};
 					const useLoadersPost = [];
 					const useLoaders = [];
 					const useLoadersPre = [];
+
 					result.forEach(r => {
 						if (r.type === "use") {
-							if (r.enforce === "post" && !noPostAutoLoaders 
+							if (r.enforce === "post" && !noPostAutoLoaders
 								&& !noPrePostAutoLoaders)
 								useLoadersPost.push(r.value);
 							else if (r.enforce === "pre" && !noPrePostAutoLoaders)
@@ -272,7 +298,7 @@ class NormalModuleFactory extends Tapable {
 							settings[r.type] = r.value;
 						}
 					});
-					
+
 					asyncLib.parallel([
 						this.resolveRequestArray.bind(this, contextInfo, this.context, useLoadersPost, this.resolvers.loader),
 						this.resolveRequestArray.bind(this, contextInfo, this.context, useLoaders, this.resolvers.loader),
@@ -304,15 +330,14 @@ class NormalModuleFactory extends Tapable {
 	/**
 	 * 创建模块
 	 * @param {ModuleData} data 创建模块的数据
-	 * @param {Fucntion} callback 回调函数
+	 * @param {Function} callback 回调函数 (err:Error,module:Module)=>void
 	 */
 	create(data, callback) {
 		const dependencies = data.dependencies;
 		const cacheEntry = dependencies[0].__NormalModuleFactoryCache;
 
-		// 如果是缓存入口 , 那么直接返回
-		if (cacheEntry)
-			return callback(null, cacheEntry);
+		// has cache , 直接返回
+		if (cacheEntry) return callback(null, cacheEntry);
 
 		const context = data.context || this.context;
 		const request = dependencies[0].request;
@@ -325,21 +350,18 @@ class NormalModuleFactory extends Tapable {
 			dependencies
 		}, (err, result) => {
 			// 发生错误
-			if (err)
-				return callback(err);
+			if (err) return callback(err);
 
-			// 如果返回结果为null , 那么直接忽略该模块的创建Ignored
-			if (!result)
-				return callback();
+			// result == null , 所有需要忽略该模块 , 那么直接返回null
+			if (!result) return callback();
 
-			// emit factory , 获得factory
+			// 创建factory
 			const factory = this.applyPluginsWaterfall0("factory", null);
 
 			// Ignored
-			if (!factory)
-				return callback();
+			if (!factory) return callback();
 
-			// 调用工厂 , 创建模块
+			// 创建模块
 			factory(result, (err, module) => {
 				if (err) return callback(err);
 
@@ -353,58 +375,67 @@ class NormalModuleFactory extends Tapable {
 	}
 
 	/**
-	 * 解析loader请求数组
+	 * 解析请求数组
 	 * @param {Object} contextInfo 上下文信息
 	 * @param {String} context 上下文路径
 	 * @param {String[]} array 请求数组
-	 * @param {ResolverFactory} resolver 请求解析器
-	 * @param {Function} callback (err , { loader , options } )
+	 * @param {Resolver} resolver 请求解析器
+	 * @param {Function} callback 回调函数 (err:Error , { loader : String , options : Object } ) = >void
 	 */
 	resolveRequestArray(contextInfo, context, array, resolver, callback) {
-		if (array.length === 0)
-			return callback(null, []);
+		if (array.length === 0) return callback(null, []);
 
+		/**
+		 * 异步map
+		 */
 		asyncLib.map(array, (item, callback) => {
-			resolver.resolve(contextInfo, context, item.loader, (err, result) => {
+			resolver.resolve(
+				contextInfo,
+				context,
+				item.loader,
+				(err, result) => {
+					// 处理错误
+					if (err &&
+						/^[^/]*$/.test(item.loader) &&
+						!/-loader$/.test(item.loader)) {
 
-				// 处理错误
-				if (err &&
-					/^[^/]*$/.test(item.loader) &&
-					!/-loader$/.test(item.loader)) {
+						return resolver.resolve(
+							contextInfo,
+							context,
+							item.loader + "-loader", err2 => {
 
-					return resolver.resolve(
-						contextInfo,
-						context,
-						item.loader + "-loader", err2 => {
+								if (!err2) {
+									err.message = err.message + "\n" +
+										"BREAKING CHANGE: It's no longer allowed to omit the '-loader' suffix when using loaders.\n" +
+										`                 You need to specify '${item.loader}-loader' instead of '${item.loader}',\n` +
+										"                 see https://webpack.js.org/guides/migrating/#automatic-loader-module-name-extension-removed";
+								}
 
-							if (!err2) {
-								err.message = err.message + "\n" +
-									"BREAKING CHANGE: It's no longer allowed to omit the '-loader' suffix when using loaders.\n" +
-									`                 You need to specify '${item.loader}-loader' instead of '${item.loader}',\n` +
-									"                 see https://webpack.js.org/guides/migrating/#automatic-loader-module-name-extension-removed";
-							}
+								callback(err);
+							});
+					}
 
-							callback(err);
-						});
-				}
+					if (err) {
+						return callback(err);
+					}
 
-				if (err) {
-					return callback(err);
-				}
+					const optionsOnly =
+						item.options
+							? { options: item.options }
+							: undefined;
 
-				const optionsOnly =
-					item.options
-						? { options: item.options }
-						: undefined;
-
-				return callback(
-					null,
-					Object.assign({}, item, identToLoaderRequest(result), optionsOnly)
-				);
-			});
+					return callback(
+						null,
+						Object.assign({}, item, identToLoaderRequest(result), optionsOnly)
+					);
+				});
 		}, callback);
 	}
 
+	/**
+	 * 
+	 * @param {*} parserOptions 
+	 */
 	getParser(parserOptions) {
 		let ident = "null";
 		if (parserOptions) {
@@ -419,11 +450,56 @@ class NormalModuleFactory extends Tapable {
 		return this.parserCache[ident] = this.createParser(parserOptions);
 	}
 
+	/**
+	 * @param {*} parserOptions 
+	 */
 	createParser(parserOptions) {
 		const parser = new Parser();
 		this.applyPlugins2("parser", parser, parserOptions || {});
 		return parser;
 	}
 }
+
+/**
+ * 
+ * @param {*} data 
+ */
+function loaderToIdent(data) {
+	if (!data.options)
+		return data.loader;
+	if (typeof data.options === "string")
+		return data.loader + "?" + data.options;
+	if (typeof data.options !== "object")
+		throw new Error("loader options must be string or object");
+	if (data.ident)
+		return data.loader + "??" + data.ident;
+	return data.loader + "?" + JSON.stringify(data.options);
+}
+
+/**
+ * 识别加载器请求 , 返回加载器对象
+ * @param {Array[]} resultString 请求字符串数组
+ * @returns {loader , options} 返回识别的加载器请求
+ */
+function identToLoaderRequest(resultString) {
+	const idx = resultString.indexOf("?");
+	let options;
+
+	// has querystring
+	if (idx >= 0) {
+		options = resultString.substr(idx + 1);
+		resultString = resultString.substr(0, idx);
+
+		return {
+			loader: resultString,
+			options
+		};
+	} else {
+		return {
+			loader: resultString
+		};
+	}
+}
+
 
 module.exports = NormalModuleFactory;

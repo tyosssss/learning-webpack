@@ -12,26 +12,26 @@ class IgnorePlugin {
 		this.checkIgnore = this.checkIgnore.bind(this);
 	}
 
-	/*
-	 * Only returns true if a "resourceRegExp" exists
-	 * and the resource given matches the regexp.
-	 */
-	checkResource(resource) {
-		if(!this.resourceRegExp) {
-			return false;
-		}
-		return this.resourceRegExp.test(resource);
+	apply(compiler) {
+		compiler.plugin("normal-module-factory", (nmf) => {
+			nmf.plugin("before-resolve", this.checkIgnore);
+		});
+		
+		compiler.plugin("context-module-factory", (cmf) => {
+			cmf.plugin("before-resolve", this.checkIgnore);
+		});
 	}
 
-	/*
-	 * Returns true if contextRegExp does not exist
-	 * or if context matches the given regexp.
+	/**
+	 * 
 	 */
-	checkContext(context) {
-		if(!this.contextRegExp) {
-			return true;
+	checkIgnore(result, callback) {
+		// check if result is ignored
+		if (this.checkResult(result)) {
+			return callback();
 		}
-		return this.contextRegExp.test(context);
+
+		return callback(null, result);
 	}
 
 	/*
@@ -42,27 +42,38 @@ class IgnorePlugin {
 	 * and "contextRegExp" have to match.
 	 */
 	checkResult(result) {
-		if(!result) {
+		if (!result) {
 			return true;
 		}
-		return this.checkResource(result.request) && this.checkContext(result.context);
+
+		return (
+			this.checkResource(result.request) &&
+			this.checkContext(result.context)
+		);
 	}
 
-	checkIgnore(result, callback) {
-		// check if result is ignored
-		if(this.checkResult(result)) {
-			return callback();
+	/*
+	 * Only returns true if a "resourceRegExp" exists
+	 * and the resource given matches the regexp.
+	 */
+	checkResource(resource) {
+		if (!this.resourceRegExp) {
+			return false;
 		}
-		return callback(null, result);
+
+		return this.resourceRegExp.test(resource);
 	}
 
-	apply(compiler) {
-		compiler.plugin("normal-module-factory", (nmf) => {
-			nmf.plugin("before-resolve", this.checkIgnore);
-		});
-		compiler.plugin("context-module-factory", (cmf) => {
-			cmf.plugin("before-resolve", this.checkIgnore);
-		});
+	/*
+	 * Returns true if contextRegExp does not exist
+	 * or if context matches the given regexp.
+	 */
+	checkContext(context) {
+		if (!this.contextRegExp) {
+			return true;
+		}
+
+		return this.contextRegExp.test(context);
 	}
 }
 

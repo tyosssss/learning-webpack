@@ -28,21 +28,30 @@ class DynamicEntryPlugin {
 		compiler.plugin("make", (compilation, callback) => {
 			const addEntry = (entry, name) => {
 				const dep = DynamicEntryPlugin.createDependency(entry, name);
+				
 				return new Promise((resolve, reject) => {
-					compilation.addEntry(this.context, dep, name, (err) => {
-						if(err) return reject(err);
-						resolve();
-					});
+					compilation
+						.addEntry(this.context, dep, name, (err) => {
+							if(err) return reject(err);
+							resolve();
+						});
 				});
 			};
 
 			Promise.resolve(this.entry()).then((entry) => {
-				if(typeof entry === "string" || Array.isArray(entry)) {
-					addEntry(entry, "main").then(() => callback(), callback);
+				if(typeof entry === "string" || 
+					Array.isArray(entry)) {
+					addEntry(entry, "main")
+						.then(() => callback(), callback);
 				} else if(typeof entry === "object") {
-					Promise.all(Object.keys(entry).map((name) => {
-						return addEntry(entry[name], name);
-					})).then(() => callback(), callback);
+					Promise.all(
+						Object
+							.keys(entry)
+							.map((name) => {
+								return addEntry(entry[name], name);
+							})
+						)
+						.then(() => callback(), callback);
 				}
 			});
 		});

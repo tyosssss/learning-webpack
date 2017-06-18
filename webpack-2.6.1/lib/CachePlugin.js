@@ -14,10 +14,12 @@ class CachePlugin {
 
 	apply(compiler) {
 		if(Array.isArray(compiler.compilers)) {
+			// 处理多编译器的情况
 			compiler.compilers.forEach((c, idx) => {
 				c.apply(new CachePlugin(this.cache[idx] = this.cache[idx] || {}));
 			});
 		} else {
+
 			compiler.plugin("compilation", compilation => {
 				if(!compilation.notCacheable) {
 					compilation.cache = this.cache;
@@ -27,16 +29,23 @@ class CachePlugin {
 					);
 				}
 			});
+			
 			compiler.plugin("watch-run", (compiler, callback) => {
 				this.watching = true;
 				callback();
 			});
+
 			compiler.plugin("run", (compiler, callback) => {
+				// 没有编译过
 				if(!compiler._lastCompilationFileDependencies) return callback();
+				
 				const fs = compiler.inputFileSystem;
 				const fileTs = compiler.fileTimestamps = {};
+				
+				// 保存所以文件依赖时间戳
 				asyncLib.forEach(compiler._lastCompilationFileDependencies, (file, callback) => {
 					fs.stat(file, (err, stat) => {
+						// 发生错误 , 立即结束
 						if(err) {
 							if(err.code === "ENOENT") return callback();
 							return callback(err);
@@ -46,16 +55,20 @@ class CachePlugin {
 							this.applyMtime(+stat.mtime);
 
 						fileTs[file] = +stat.mtime || Infinity;
+
 						callback();
 					});
 				}, err => {
 					if(err) return callback(err);
+					
 					Object.keys(fileTs).forEach(key => {
 						fileTs[key] += this.FS_ACCURENCY;
 					});
+					
 					callback();
 				});
 			});
+
 			compiler.plugin("after-compile", function(compilation, callback) {
 				compilation.compiler._lastCompilationFileDependencies = compilation.fileDependencies;
 				compilation.compiler._lastCompilationContextDependencies = compilation.contextDependencies;

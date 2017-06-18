@@ -6,6 +6,12 @@ var assign = require("object-assign");
 var createInnerCallback = require("./createInnerCallback");
 var getInnerRequest = require("./getInnerRequest");
 
+/**
+ * 处理别名 -- 将别名替换为真实的请求路径
+ * @param {*} source 
+ * @param {*} options 
+ * @param {*} target 
+ */
 function AliasPlugin(source, options, target) {
 	this.source = source;
 	this.name = options.name;
@@ -20,15 +26,24 @@ AliasPlugin.prototype.apply = function(resolver) {
 	var name = this.name;
 	var alias = this.alias;
 	var onlyModule = this.onlyModule;
+	
 	resolver.plugin(this.source, function(request, callback) {
 		var innerRequest = getInnerRequest(resolver, request);
+		
 		if(!innerRequest) return callback();
-		if((!onlyModule && innerRequest.indexOf(name + "/") === 0) || innerRequest === name) {
-			if(innerRequest.indexOf(alias + "/") !== 0 && innerRequest != alias) {
+		
+		if((!onlyModule && 
+			innerRequest.indexOf(name + "/") === 0) || 
+			innerRequest === name) {
+
+			if(innerRequest.indexOf(alias + "/") !== 0 && 
+				 innerRequest != alias) {
+				
 				var newRequestStr = alias + innerRequest.substr(name.length);
 				var obj = assign({}, request, {
 					request: newRequestStr
 				});
+
 				return resolver.doResolve(target, obj, "aliased with mapping '" + name + "': '" + alias + "' to '" + newRequestStr + "'", createInnerCallback(function(err, result) {
 					if(arguments.length > 0) return callback(err, result);
 

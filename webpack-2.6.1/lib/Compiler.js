@@ -155,6 +155,8 @@ Watching.prototype.close = function(callback) {
 	}
 };
 
+
+
 function Compiler() {
   // 继承tapable
 	Tapable.call(this);
@@ -175,7 +177,9 @@ function Compiler() {
 		loader: null,
 		context: null
 	};
+
 	var deprecationReported = false;
+	
 	this.parser = {
 		plugin: function(hook, fn) {
 			if(!deprecationReported) {
@@ -184,12 +188,14 @@ function Compiler() {
 					"It was called " + new Error().stack.split("\n")[2].trim() + ".");
 				deprecationReported = true;
 			}
+
 			this.plugin("compilation", function(compilation, data) {
 				data.normalModuleFactory.plugin("parser", function(parser) {
 					parser.plugin(hook, fn);
 				});
 			});
 		}.bind(this),
+		
 		apply: function() {
 			var args = arguments;
 			if(!deprecationReported) {
@@ -217,6 +223,9 @@ module.exports = Compiler;
 Compiler.prototype = Object.create(Tapable.prototype);
 Compiler.prototype.constructor = Compiler;
 
+/**
+ * Wathcing
+ */
 Compiler.Watching = Watching;
 
 /**
@@ -292,38 +301,160 @@ Compiler.prototype.run = function(callback) {
 	});
 };
 
+
 /**
- * 
+ * 读取编译记录文件的内容
+ * @param {Function} callback
  */
-Compiler.prototype.runAsChild = function(callback) {
-	this.compile(function(err, compilation) {
+Compiler.prototype.readRecords = function readRecords(callback) {
+	var self = this;
+	
+  // 如果没有配置 , 那么不读取
+	if(!self.recordsInputPath) {
+		self.records = {};
+		return callback();
+	}
+
+  // 检查是否存在
+	self.inputFileSystem.stat(self.recordsInputPath, function(err) {
+		// It doesn't exist
+		// We can ignore self.
+		if(err) return callback();
+
+    // 读取内容
+		self.inputFileSystem.readFile(self.recordsInputPath, function(err, content) {
+			if(err) return callback(err);
+
+			try {
+				self.records = JSON.parse(content.toString("utf-8"));
+			} catch(e) {
+				e.message = "Cannot parse records: " + e.message;
+				return callback(e);
+			}
+
+			return callback();
+		});
+	});
+};
+
+
+
+/**
+ * 编译
+ * @param {Function} callback 回调函数
+ */
+Compiler.prototype.compile = function(callback) {
+	var self = this;
+	var params = self.newCompilationParams();
+
+	self.applyPluginsAsync("before-compile", params, function(err) {
 		if(err) return callback(err);
 
-		this.parentCompilation.children.push(compilation);
-		Object.keys(compilation.assets).forEach(function(name) {
-			this.parentCompilation.assets[name] = compilation.assets[name];
-		}.bind(this));
+    // pub "compile"
+		self.applyPlugins("compile", params);
 
-		var entries = Object.keys(compilation.entrypoints).map(function(name) {
-			return compilation.entrypoints[name].chunks;
-		}).reduce(function(array, chunks) {
-			return array.concat(chunks);
-		}, []);
+    // 创建一个新的Comp
+		var compilation = self.newCompilation(params);
 
-		return callback(null, entries, compilation);
-	}.bind(this));
+    // pub "make"
+		self.applyPluginsParallel("make", compilation, function(err) {
+			if(err) return callback(err);
+
+      // 编译完成
+			compilation.finish();
+
+      // 
+			compilation.seal(function(err) {
+				if(err) return callback(err);
+
+				self.applyPluginsAsync("after-compile", compilation, function(err) {
+					if(err) return callback(err);
+
+					return callback(null, compilation);
+				});
+			});
+		});
+	});
 };
 
 /**
- * 
+ * 创建Compilation需要的参数
+ * @returns {Object} {normalModuleFactory , contextModuleFactory , compilationDependencies}
  */
-Compiler.prototype.purgeInputFileSystem = function() {
-	if(this.inputFileSystem && this.inputFileSystem.purge)
-		this.inputFileSystem.purge();
+Compiler.prototype.newCompilationParams = function() {
+	var params = {
+		normalModuleFactory: this.createNormalModuleFactory(),
+		contextModuleFactory: this.createContextModuleFactory(),
+		compilationDependencies: []
+	};
+
+	return params;
 };
 
 /**
+ * 创建普通模块的工厂实例
+ * @returns {NormalModuleFactory}
+ */
+Compiler.prototype.createNormalModuleFactory = function() {
+	var normalModuleFactory = new NormalModuleFactory(
+    this.options.context, 
+    this.resolvers, 
+    this.options.module || {}
+  );
+
+	this.applyPlugins("normal-module-factory", normalModuleFactory);
+
+	return normalModuleFactory;
+};
+
+/**
+ * 创建上下文模块的工厂实例
+ * @returns {ContextModuleFactory}
+ */
+Compiler.prototype.createContextModuleFactory = function() {
+	var contextModuleFactory = new ContextModuleFactory(
+    this.resolvers, 
+    this.inputFileSystem
+  );
+
+	this.applyPlugins("context-module-factory", contextModuleFactory);
+
+	return contextModuleFactory;
+};
+
+/**
+ * 创建新的Compilation实例
+ * @param {CompilationParams} params
+ * @returns {Compilation}
+ */
+Compiler.prototype.newCompilation = function(params) {
+	var compilation = this.createCompilation();
+	
+  compilation.fileTimestamps = this.fileTimestamps;
+	compilation.contextTimestamps = this.contextTimestamps;
+	compilation.name = this.name;
+	compilation.records = this.records;
+	compilation.compilationDependencies = params.compilationDependencies;
+	
+  this.applyPlugins("this-compilation", compilation, params);
+	this.applyPlugins("compilation", compilation, params);
+	
+  return compilation;
+};
+
+/**
+ * 创建一个Compilation实例
+ */
+Compiler.prototype.createCompilation = function() {
+	return new Compilation(this);
+};
+
+
+
+/**
  * 
+ * @param {Compilation} compilation
+ * @param {Function} callback
  */
 Compiler.prototype.emitAssets = function(compilation, callback) {
 	var outputPath;
@@ -407,39 +538,36 @@ Compiler.prototype.emitRecords = function emitRecords(callback) {
 	}
 };
 
+
+
 /**
- * 读取编译记录文件的内容
- * @param {Function} callback
+ * 
  */
-Compiler.prototype.readRecords = function readRecords(callback) {
-	var self = this;
-	
-  // 如果没有配置 , 那么不读取
-	if(!self.recordsInputPath) {
-		self.records = {};
-		return callback();
-	}
+Compiler.prototype.runAsChild = function(callback) {
+	this.compile(function(err, compilation) {
+		if(err) return callback(err);
 
-  // 检查是否存在
-	self.inputFileSystem.stat(self.recordsInputPath, function(err) {
-		// It doesn't exist
-		// We can ignore self.
-		if(err) return callback();
+		this.parentCompilation.children.push(compilation);
+		Object.keys(compilation.assets).forEach(function(name) {
+			this.parentCompilation.assets[name] = compilation.assets[name];
+		}.bind(this));
 
-    // 读取内容
-		self.inputFileSystem.readFile(self.recordsInputPath, function(err, content) {
-			if(err) return callback(err);
+		var entries = Object.keys(compilation.entrypoints).map(function(name) {
+			return compilation.entrypoints[name].chunks;
+		}).reduce(function(array, chunks) {
+			return array.concat(chunks);
+		}, []);
 
-			try {
-				self.records = JSON.parse(content.toString("utf-8"));
-			} catch(e) {
-				e.message = "Cannot parse records: " + e.message;
-				return callback(e);
-			}
+		return callback(null, entries, compilation);
+	}.bind(this));
+};
 
-			return callback();
-		});
-	});
+/**
+ * 
+ */
+Compiler.prototype.purgeInputFileSystem = function() {
+	if(this.inputFileSystem && this.inputFileSystem.purge)
+		this.inputFileSystem.purge();
 };
 
 /**
@@ -477,114 +605,4 @@ Compiler.prototype.createChildCompiler = function(compilation, compilerName, out
  */
 Compiler.prototype.isChild = function() {
 	return !!this.parentCompilation;
-};
-
-/**
- * 创建一个Compilation实例
- */
-Compiler.prototype.createCompilation = function() {
-	return new Compilation(this);
-};
-
-/**
- * 创建新的Compilation实例
- * @param {CompilationParams} params
- * @returns {Compilation}
- */
-Compiler.prototype.newCompilation = function(params) {
-	var compilation = this.createCompilation();
-	
-  compilation.fileTimestamps = this.fileTimestamps;
-	compilation.contextTimestamps = this.contextTimestamps;
-	compilation.name = this.name;
-	compilation.records = this.records;
-	compilation.compilationDependencies = params.compilationDependencies;
-	
-  this.applyPlugins("this-compilation", compilation, params);
-	this.applyPlugins("compilation", compilation, params);
-	
-  return compilation;
-};
-
-/**
- * 创建普通模块的工厂实例
- * @returns {NormalModuleFactory}
- */
-Compiler.prototype.createNormalModuleFactory = function() {
-	var normalModuleFactory = new NormalModuleFactory(
-    this.options.context, 
-    this.resolvers, 
-    this.options.module || {}
-  );
-
-	this.applyPlugins("normal-module-factory", normalModuleFactory);
-
-	return normalModuleFactory;
-};
-
-/**
- * 创建上下文模块的工厂实例
- * @returns {ContextModuleFactory}
- */
-Compiler.prototype.createContextModuleFactory = function() {
-	var contextModuleFactory = new ContextModuleFactory(
-    this.resolvers, 
-    this.inputFileSystem
-  );
-
-	this.applyPlugins("context-module-factory", contextModuleFactory);
-
-	return contextModuleFactory;
-};
-
-/**
- * 创建Compilation需要的参数
- * @returns {Object} {normalModuleFactory , contextModuleFactory , compilationDependencies}
- */
-Compiler.prototype.newCompilationParams = function() {
-	var params = {
-		normalModuleFactory: this.createNormalModuleFactory(),
-		contextModuleFactory: this.createContextModuleFactory(),
-		compilationDependencies: []
-	};
-
-	return params;
-};
-
-/**
- * 编译
- * @param {Function} callback 回调函数
- */
-Compiler.prototype.compile = function(callback) {
-	var self = this;
-	var params = self.newCompilationParams();
-
-	self.applyPluginsAsync("before-compile", params, function(err) {
-		if(err) return callback(err);
-
-    // pub "compile"
-		self.applyPlugins("compile", params);
-
-    // 创建一个新的Comp
-		var compilation = self.newCompilation(params);
-
-    // pub "make"
-		self.applyPluginsParallel("make", compilation, function(err) {
-			if(err) return callback(err);
-
-      // 编译完成
-			compilation.finish();
-
-      // 
-			compilation.seal(function(err) {
-				if(err) return callback(err);
-
-				self.applyPluginsAsync("after-compile", compilation, function(err) {
-					if(err) return callback(err);
-
-					return callback(null, compilation);
-				});
-			});
-		});
-	});
 };

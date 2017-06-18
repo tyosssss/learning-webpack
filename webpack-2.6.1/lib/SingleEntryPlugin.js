@@ -7,9 +7,9 @@ const SingleEntryDependency = require("./dependencies/SingleEntryDependency");
 
 class SingleEntryPlugin {
 	constructor(context, entry, name) {
-		this.context = context; // 上下文   String
-		this.entry = entry;     // 入口文件 String
-		this.name = name;       // 入口名称 String
+		this.context = context; // 上下文的路径
+		this.entry = entry;     // 入口文件路径 
+		this.name = name;       // 入口名称 
 	}
 
 	apply(compiler) {

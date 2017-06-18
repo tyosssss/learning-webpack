@@ -8,6 +8,12 @@ var DescriptionFileUtils = require("./DescriptionFileUtils");
 var createInnerCallback = require("./createInnerCallback");
 var getInnerRequest = require("./getInnerRequest");
 
+/**
+ * 
+ * @param {*} source 
+ * @param {*} options 
+ * @param {*} target 
+ */
 function ConcordModulesPlugin(source, options, target) {
 	this.source = source;
 	this.options = options;
@@ -18,6 +24,7 @@ module.exports = ConcordModulesPlugin;
 ConcordModulesPlugin.prototype.apply = function(resolver) {
 	var target = this.target;
 	var options = this.options;
+	
 	resolver.plugin(this.source, function(request, callback) {
 		var innerRequest = getInnerRequest(resolver, request);
 		if(!innerRequest) return callback();
@@ -36,6 +43,7 @@ ConcordModulesPlugin.prototype.apply = function(resolver) {
 			path: request.descriptionFileRoot,
 			request: data
 		});
+
 		resolver.doResolve(target, obj, "aliased from description file " + request.descriptionFilePath + " with mapping '" + innerRequest + "' to '" + data + "'", createInnerCallback(function(err, result) {
 			if(arguments.length > 0) return callback(err, result);
 

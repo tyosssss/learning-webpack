@@ -9,6 +9,7 @@ function loadDescriptionFile(resolver, directory, filenames, callback) {
 	(function findDescriptionFile() {
 		forEachBail(filenames, function(filename, callback) {
 			var descriptionFilePath = resolver.join(directory, filename);
+			
 			if(resolver.fileSystem.readJson) {
 				resolver.fileSystem.readJson(descriptionFilePath, function(err, content) {
 					if(err) {

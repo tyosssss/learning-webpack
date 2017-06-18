@@ -12,6 +12,7 @@ module.exports = NextPlugin;
 
 NextPlugin.prototype.apply = function(resolver) {
 	var target = this.target;
+	
 	resolver.plugin(this.source, function(request, callback) {
 		resolver.doResolve(target, request, null, callback);
 	});

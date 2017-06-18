@@ -35,7 +35,21 @@ var ModuleAppendPlugin = require("./ModuleAppendPlugin");
 var UnsafeCachePlugin = require("./UnsafeCachePlugin");
 var LogInfoPlugin = require("./LogInfoPlugin");
 
-exports.createResolver = function(options) {
+/**
+ * @typedef {MainField}
+ * @proprety {String} name
+ * @proprety {Boolean} forceRelative
+ */
+
+/**
+ * @typedef {Alias}
+ * @property {String} name 别名
+ * @proprety {String} alias 别名映射的真实路径
+ * @proprety {Boolean} onlyModule
+ */
+
+
+exports.createResolver = function (options) {
 
 	//// OPTIONS ////
 
@@ -75,7 +89,9 @@ exports.createResolver = function(options) {
 	var alias = options.alias || [];
 
 	// Resolve symlinks to their symlinked location
-	var symlinks = typeof options.symlinks !== "undefined" ? options.symlinks : true;
+	var symlinks = typeof options.symlinks !== "undefined"
+		? options.symlinks
+		: true;
 
 	// Resolve to a context instead of a file
 	var resolveToContext = options.resolveToContext || false;
@@ -85,9 +101,8 @@ exports.createResolver = function(options) {
 
 	// A function which decides whether a request should be cached or not.
 	// an object is passed with `path` and `request` properties.
-	var cachePredicate = options.cachePredicate || function() {
-		return true;
-	};
+	var cachePredicate = options.cachePredicate ||
+		function () { return true; };
 
 	// The file system which should be used
 	var fileSystem = options.fileSystem;
@@ -100,21 +115,25 @@ exports.createResolver = function(options) {
 
 	//// options processing ////
 
-	if(!resolver) {
-		resolver = new Resolver(useSyncFileSystemCalls 
-			? new SyncAsyncFileSystemDecorator(fileSystem) 
-			: fileSystem)
+	if (!resolver) {
+		resolver = new Resolver(
+			useSyncFileSystemCalls
+				? new SyncAsyncFileSystemDecorator(fileSystem)
+				: fileSystem
+		)
 	}
 
 	extensions = [].concat(extensions);
+
 	moduleExtensions = [].concat(moduleExtensions);
 
-	modules = mergeFilteredToArray([].concat(modules), function(item) {
-		return !isAbsolutePath(item);
-	});
-
-	mainFields = mainFields.map(function(item) {
-		if(typeof item === "string") {
+	modules = mergeFilteredToArray(
+		[].concat(modules),
+		item => !isAbsolutePath(item)
+	);
+	
+	mainFields = mainFields.map(function (item) {
+		if (typeof item === "string") {
 			item = {
 				name: item,
 				forceRelative: true
@@ -123,66 +142,76 @@ exports.createResolver = function(options) {
 		return item;
 	});
 
-	if(typeof alias === "object" && !Array.isArray(alias)) {
-		alias = Object.keys(alias).map(function(key) {
+	if (typeof alias === "object" && !Array.isArray(alias)) {
+		alias = Object.keys(alias).map(function (key) {
 			var onlyModule = false;
 			var obj = alias[key];
-			if(/\$$/.test(key)) {
+			
+			if (/\$$/.test(key)) {
 				onlyModule = true;
 				key = key.substr(0, key.length - 1);
 			}
-			if(typeof obj === "string") {
+
+			if (typeof obj === "string") {
 				obj = {
 					alias: obj
 				};
 			}
+
 			obj = assign({
 				name: key,
 				onlyModule: onlyModule
 			}, obj);
+
 			return obj;
 		});
 	}
 
-	if(unsafeCache && typeof unsafeCache !== "object") {
+	if (unsafeCache && typeof unsafeCache !== "object") {
 		unsafeCache = {};
 	}
 
 	//// pipeline ////
 
 	// resolve
-	if(unsafeCache) {
+	if (unsafeCache) {
 		plugins.push(new UnsafeCachePlugin("resolve", cachePredicate, unsafeCache, "new-resolve"));
 		plugins.push(new ParsePlugin("new-resolve", "parsed-resolve"));
 	} else {
 		plugins.push(new ParsePlugin("resolve", "parsed-resolve"));
 	}
 
+	//
 	// parsed-resolve
+	//
 	plugins.push(new DescriptionFilePlugin("parsed-resolve", descriptionFiles, "described-resolve"));
 	plugins.push(new NextPlugin("after-parsed-resolve", "described-resolve"));
 
-	// described-resolve
-	alias.forEach(function(item) {
+	//
+	// 处理别名 , 
+	//
+	alias.forEach(function (item) {
 		plugins.push(new AliasPlugin("described-resolve", item, "resolve"));
 	});
 	plugins.push(new ConcordModulesPlugin("described-resolve", {}, "resolve"));
-	aliasFields.forEach(function(item) {
+	aliasFields.forEach(function (item) {
 		plugins.push(new AliasFieldPlugin("described-resolve", item, "resolve"));
 	});
+	
 	plugins.push(new ModuleKindPlugin("after-described-resolve", "raw-module"));
 	plugins.push(new JoinRequestPlugin("after-described-resolve", "relative"));
 
 	// raw-module
-	moduleExtensions.forEach(function(item) {
+	moduleExtensions.forEach(function (item) {
 		plugins.push(new ModuleAppendPlugin("raw-module", item, "module"));
 	})
-	if(!enforceModuleExtension)
+
+	if (!enforceModuleExtension)
 		plugins.push(new TryNextPlugin("raw-module", null, "module"));
 
 	// module
-	modules.forEach(function(item) {
-		if(Array.isArray(item))
+	modules.forEach(function (item) {
+		if (Array.isArray(item))
 			plugins.push(new ModulesInHierachicDirectoriesPlugin("module", item, "resolve"));
 		else
 			plugins.push(new ModulesInRootPlugin("module", item, "resolve"));
@@ -199,7 +228,7 @@ exports.createResolver = function(options) {
 	// directory
 	plugins.push(new DirectoryExistsPlugin("directory", "existing-directory"));
 
-	if(resolveToContext) {
+	if (resolveToContext) {
 
 		// existing-directory
 		plugins.push(new NextPlugin("existing-directory", "resolved"));
@@ -208,10 +237,10 @@ exports.createResolver = function(options) {
 
 		// existing-directory
 		plugins.push(new ConcordMainPlugin("existing-directory", {}, "resolve"));
-		mainFields.forEach(function(item) {
+		mainFields.forEach(function (item) {
 			plugins.push(new MainFieldPlugin("existing-directory", item, "resolve"));
 		});
-		mainFiles.forEach(function(item) {
+		mainFiles.forEach(function (item) {
 			plugins.push(new UseFilePlugin("existing-directory", item, "undescribed-raw-file"));
 		});
 
@@ -220,22 +249,25 @@ exports.createResolver = function(options) {
 		plugins.push(new NextPlugin("after-undescribed-raw-file", "raw-file"));
 
 		// raw-file
-		if(!enforceExtension)
+		if (!enforceExtension)
 			plugins.push(new TryNextPlugin("raw-file", "no extension", "file"));
+		
 		plugins.push(new ConcordExtensionsPlugin("raw-file", {}, "file"));
-		extensions.forEach(function(item) {
+		
+		extensions.forEach(function (item) {
 			plugins.push(new AppendPlugin("raw-file", item, "file"));
 		})
 
 		// file
-		alias.forEach(function(item) {
+		alias.forEach(function (item) {
 			plugins.push(new AliasPlugin("file", item, "resolve"));
 		});
 		plugins.push(new ConcordModulesPlugin("file", {}, "resolve"));
-		aliasFields.forEach(function(item) {
+		aliasFields.forEach(function (item) {
 			plugins.push(new AliasFieldPlugin("file", item, "resolve"));
 		});
-		if(symlinks)
+		
+		if (symlinks)
 			plugins.push(new SymlinkPlugin("file", "relative"));
 		plugins.push(new FileExistsPlugin("file", "existing-file"));
 
@@ -249,21 +281,30 @@ exports.createResolver = function(options) {
 
 	//// RESOLVER ////
 
-	plugins.forEach(function(plugin) {
+	plugins.forEach(function (plugin) {
 		resolver.apply(plugin);
 	});
+
 	return resolver;
 };
 
+/**
+ * 
+ * @param {Array} array 
+ * @param {Function} filter 
+ * @returns {Array}
+ */
 function mergeFilteredToArray(array, filter) {
-	return array.reduce(function(array, item) {
-		if(filter(item)) {
+	return array.reduce(function (array, item) {
+		if (filter(item)) {
 			var lastElement = array[array.length - 1];
-			if(Array.isArray(lastElement)) {
+			
+			if (Array.isArray(lastElement)) {
 				lastElement.push(item);
 			} else {
 				array.push([item]);
 			}
+			
 			return array;
 		} else {
 			array.push(item);
