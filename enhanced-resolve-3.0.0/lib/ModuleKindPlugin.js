@@ -7,8 +7,8 @@ var createInnerCallback = require("./createInnerCallback");
 
 /**
  * 过滤掉非模块请求路径 , 专注处理模块请求路径
- * @param {*} source 
- * @param {*} target 
+ * @param {String} source 绑定的开始事件
+ * @param {String} target 绑定的目标事件
  */
 function ModuleKindPlugin(source, target) {
 	this.source = source;

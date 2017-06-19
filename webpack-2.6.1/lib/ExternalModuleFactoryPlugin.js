@@ -6,6 +6,10 @@
 
 const ExternalModule = require("./ExternalModule");
 
+/**
+ * @param {String} type
+ * @param {Map} externals
+ */
 class ExternalModuleFactoryPlugin {
 	constructor(type, externals) {
 		this.type = type;							// libraryTarget
@@ -15,14 +19,17 @@ class ExternalModuleFactoryPlugin {
 	apply(normalModuleFactory) {
 		const globalType = this.type;
 		
+		/**
+		 * 
+		 */
 		normalModuleFactory.plugin("factory", factory => (data, callback) => {
 			const context = data.context;
 			const dependency = data.dependencies[0];
 
 			/**
 			 * 处理外部依赖
-			 * @param {*} value 
-			 * @param {*} type 
+			 * @param {String} value 
+			 * @param {String|Boolean} [type] false=不处理;true=请求路径
 			 * @param {Function} callback 
 			 */
 			function handleExternal(value, type, callback) {
@@ -31,14 +38,14 @@ class ExternalModuleFactoryPlugin {
 					type = undefined;
 				}
 
-				if(value === false) 
-					return factory(data, callback);
+				if(value === false) return factory(data, callback);
 
 				if(value === true) 
 					value = dependency.request;
 					
 				if(typeof type === "undefined" && /^[a-z0-9]+ /.test(value)) {
 					const idx = value.indexOf(" ");
+					
 					type = value.substr(0, idx);
 					value = value.substr(idx + 1);
 				}
@@ -49,6 +56,7 @@ class ExternalModuleFactoryPlugin {
 			}
 
 			(function handleExternals(externals, callback) {
+				
 				if(typeof externals === "string") {
 					if(externals === dependency.request) {
 						return handleExternal(dependency.request, callback);

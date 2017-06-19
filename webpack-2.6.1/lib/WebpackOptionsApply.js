@@ -45,7 +45,7 @@ const FlagDependencyUsagePlugin = require("./FlagDependencyUsagePlugin");
 const FlagDependencyExportsPlugin = require("./FlagDependencyExportsPlugin");
 const SizeLimitsPlugin = require("./performance/SizeLimitsPlugin");
 
-const ResolverFactory = require("enhanced-resolve").ResolverFactory;
+const ResolverFactory = require("../../enhanced-resolve-3.0.0/lib/node").ResolverFactory;
 
 class WebpackOptionsApply extends OptionsApply {
 	constructor() {

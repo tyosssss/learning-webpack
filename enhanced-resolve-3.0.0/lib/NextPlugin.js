@@ -4,6 +4,11 @@
 */
 var assign = require("object-assign");
 
+/**
+ * 读取包描述文件的内容
+ * @param {String} source 绑定的开始事件
+ * @param {String} target 绑定的目标事件
+ */
 function NextPlugin(source, target) {
 	this.source = source;
 	this.target = target;

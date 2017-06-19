@@ -8,6 +8,11 @@ const DelegatedSourceDependency = require("./dependencies/DelegatedSourceDepende
 const DelegatedModuleFactoryPlugin = require("./DelegatedModuleFactoryPlugin");
 const ExternalModuleFactoryPlugin = require("./ExternalModuleFactoryPlugin");
 
+/**
+ * 引用dll
+ * @param {Object} options
+ * @param {String} options.manifest dll的模块清单
+ */
 class DllReferencePlugin {
 	constructor(options) {
 		this.options = options;
@@ -38,6 +43,7 @@ class DllReferencePlugin {
 
 		compiler.plugin("compile", (params) => {
 			let manifest = this.options.manifest;
+			
 			if(typeof manifest === "string") {
 				manifest = params["dll reference " + manifest];
 			}
@@ -48,6 +54,12 @@ class DllReferencePlugin {
 			const source = "dll-reference " + name;
 			
       externals[source] = name;
+
+			// 
+			// add 插件
+			// 1. ExternalModuleFactoryPlugin -- 将dll导出为外部模块
+			// 2. DelegatedModuleFactoryPlugin
+			//
 			params.normalModuleFactory.apply(new ExternalModuleFactoryPlugin(sourceType, externals));
 			params.normalModuleFactory.apply(new DelegatedModuleFactoryPlugin({
 				source: source,

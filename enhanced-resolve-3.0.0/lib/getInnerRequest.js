@@ -2,6 +2,11 @@
 	MIT License http://www.opensource.org/licenses/mit-license.php
 	Author Tobias Koppers @sokra
 */
+
+/**
+ * @param {Resolver} 解析器
+ * @param {ResolverRequest} 解析器请求
+ */
 module.exports = function getInnerRequest(resolver, request) {
 	if(typeof request.__innerRequest === "string" &&
 		request.__innerRequest_request === request.request &&

@@ -131,7 +131,7 @@ exports.createResolver = function (options) {
 		[].concat(modules),
 		item => !isAbsolutePath(item)
 	);
-	
+
 	mainFields = mainFields.map(function (item) {
 		if (typeof item === "string") {
 			item = {
@@ -146,7 +146,7 @@ exports.createResolver = function (options) {
 		alias = Object.keys(alias).map(function (key) {
 			var onlyModule = false;
 			var obj = alias[key];
-			
+
 			if (/\$$/.test(key)) {
 				onlyModule = true;
 				key = key.substr(0, key.length - 1);
@@ -193,12 +193,18 @@ exports.createResolver = function (options) {
 	alias.forEach(function (item) {
 		plugins.push(new AliasPlugin("described-resolve", item, "resolve"));
 	});
+
 	plugins.push(new ConcordModulesPlugin("described-resolve", {}, "resolve"));
+
+	// 分别处理指定的别名字段
 	aliasFields.forEach(function (item) {
 		plugins.push(new AliasFieldPlugin("described-resolve", item, "resolve"));
 	});
-	
+
+	// 专注模块路径处理
 	plugins.push(new ModuleKindPlugin("after-described-resolve", "raw-module"));
+
+	// 专注
 	plugins.push(new JoinRequestPlugin("after-described-resolve", "relative"));
 
 	// raw-module
@@ -251,9 +257,9 @@ exports.createResolver = function (options) {
 		// raw-file
 		if (!enforceExtension)
 			plugins.push(new TryNextPlugin("raw-file", "no extension", "file"));
-		
+
 		plugins.push(new ConcordExtensionsPlugin("raw-file", {}, "file"));
-		
+
 		extensions.forEach(function (item) {
 			plugins.push(new AppendPlugin("raw-file", item, "file"));
 		})
@@ -266,7 +272,7 @@ exports.createResolver = function (options) {
 		aliasFields.forEach(function (item) {
 			plugins.push(new AliasFieldPlugin("file", item, "resolve"));
 		});
-		
+
 		if (symlinks)
 			plugins.push(new SymlinkPlugin("file", "relative"));
 		plugins.push(new FileExistsPlugin("file", "existing-file"));
@@ -279,7 +285,7 @@ exports.createResolver = function (options) {
 	// resolved
 	plugins.push(new ResultPlugin("resolved"));
 
-	//// RESOLVER ////
+	// //// RESOLVER ////
 
 	plugins.forEach(function (plugin) {
 		resolver.apply(plugin);
@@ -298,13 +304,13 @@ function mergeFilteredToArray(array, filter) {
 	return array.reduce(function (array, item) {
 		if (filter(item)) {
 			var lastElement = array[array.length - 1];
-			
+
 			if (Array.isArray(lastElement)) {
 				lastElement.push(item);
 			} else {
 				array.push([item]);
 			}
-			
+
 			return array;
 		} else {
 			array.push(item);

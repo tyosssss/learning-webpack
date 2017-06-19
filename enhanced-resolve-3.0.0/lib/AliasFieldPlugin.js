@@ -7,6 +7,12 @@ var DescriptionFileUtils = require("./DescriptionFileUtils");
 var createInnerCallback = require("./createInnerCallback");
 var getInnerRequest = require("./getInnerRequest");
 
+/**
+ * 处理别名 -- 
+ * @param {String} source 绑定的开始事件
+ * @param {String} field 字段名
+ * @param {String} target 绑定的目标事件
+ */
 function AliasFieldPlugin(source, field, target) {
 	this.source = source;
 	this.field = field;
@@ -17,18 +23,26 @@ module.exports = AliasFieldPlugin;
 AliasFieldPlugin.prototype.apply = function(resolver) {
 	var target = this.target;
 	var field = this.field;
+	
 	resolver.plugin(this.source, function(request, callback) {
 		if(!request.descriptionFileData) return callback();
+		
 		var innerRequest = getInnerRequest(resolver, request);
 		if(!innerRequest) return callback();
+		
 		var fieldData = DescriptionFileUtils.getField(request.descriptionFileData, field);
+		
 		if(typeof fieldData !== "object") {
 			if(callback.log) callback.log("Field '" + field + "' doesn't contain a valid alias configuration");
 			return callback();
 		}
+
 		var data1 = fieldData[innerRequest];
 		var data2 = fieldData[innerRequest.replace(/^\.\//, "")];
-		var data = typeof data1 !== "undefined" ? data1 : data2;
+		var data = typeof data1 !== "undefined" 
+			? data1 
+			: data2;
+		
 		if(data === innerRequest) return callback();
 		if(data === undefined) return callback();
 		if(data === false) {
@@ -37,10 +51,12 @@ AliasFieldPlugin.prototype.apply = function(resolver) {
 			});
 			return callback(null, ignoreObj);
 		}
+		
 		var obj = assign({}, request, {
 			path: request.descriptionFileRoot,
 			request: data
 		});
+
 		resolver.doResolve(target, obj, "aliased from description file " + request.descriptionFilePath + " with mapping '" + innerRequest + "' to '" + data + "'", createInnerCallback(function(err, result) {
 			if(arguments.length > 0) return callback(err, result);
 

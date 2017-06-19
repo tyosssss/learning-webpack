@@ -7,7 +7,7 @@
       "name": "Launch webpack",
       "program": "${workspaceRoot}/seed.js",
       "args": [
-        "examples/example.js"
+        "examples/dll-plugin/webpack.config.js"
       ]
     },
     {

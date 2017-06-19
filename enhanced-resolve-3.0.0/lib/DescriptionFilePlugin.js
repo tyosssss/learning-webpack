@@ -8,9 +8,9 @@ var DescriptionFileUtils = require("./DescriptionFileUtils");
 
 /**
  * 读取包描述文件的内容
- * @param {*} source 
- * @param {*} filenames 
- * @param {*} target 
+ * @param {String} source 绑定的开始事件
+ * @param {String[]} filenames 一个或多个包的描述文件
+ * @param {String} target 绑定的目标事件
  */
 function DescriptionFilePlugin(source, filenames, target) {
 	this.source = source;
@@ -27,7 +27,9 @@ DescriptionFilePlugin.prototype.apply = function (resolver) {
 		var fs = this.fileSystem;			// 文件系统
 		var directory = request.path;	// 读取目录
 
+		// 
 		// 从path目录中读取描述文件
+		//
 		DescriptionFileUtils.loadDescriptionFile(resolver, directory, filenames, function (err, result) {
 
 			//
@@ -46,6 +48,7 @@ DescriptionFilePlugin.prototype.apply = function (resolver) {
 				return callback();
 			}
 
+			// 包描述文件的相对路径
 			var relativePath = "." +
 				request.path
 					.substr(result.directory.length)
@@ -58,13 +61,25 @@ DescriptionFilePlugin.prototype.apply = function (resolver) {
 				relativePath: relativePath
 			});
 
-			resolver.doResolve(target, obj, "using description file: " + result.path + " (relative path: " + relativePath + ")", createInnerCallback(function (err, result) {
-				if (err) return callback(err);
-				if (result) return callback(null, result);
+			resolver.doResolve(
+				target,
+				obj,
+				"using description file: " +
+				result.path +
+				" (relative path: " +
+				relativePath +
+				")",
+				createInnerCallback(
+					function (err, result) {
+						if (err) return callback(err);
+						if (result) return callback(null, result);
 
-				// Don't allow other description files or none at all
-				callback(null, null);
-			}, callback));
+						// Don't allow other description files or none at all
+						callback(null, null);
+					},
+					callback
+				)
+			);
 		});
 	});
 };

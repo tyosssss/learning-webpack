@@ -4,10 +4,16 @@
 */
 var assign = require("object-assign");
 
+/**
+ * 解析请求路径 , 返回解析结果
+ * @param {String} source 绑定的开始事件
+ * @param {String} target 绑定的目标事件
+ */
 function ParsePlugin(source, target) {
 	this.source = source;
 	this.target = target;
 }
+
 module.exports = ParsePlugin;
 
 ParsePlugin.prototype.apply = function(resolver) {

@@ -10,6 +10,9 @@ const RawSource = require("webpack-sources").RawSource;
 const WebpackMissingModule = require("./dependencies/WebpackMissingModule");
 const DelegatedSourceDependency = require("./dependencies/DelegatedSourceDependency");
 
+/**
+ * 
+ */
 class DelegatedModule extends Module {
 	constructor(sourceRequest, data, type, userRequest) {
 		super();

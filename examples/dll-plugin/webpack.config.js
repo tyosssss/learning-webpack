@@ -1,7 +1,7 @@
 const path = require('path')
-const webpack = require("webpack")
+const webpack = require('../../webpack-2.6.1/lib/webpack')
 const fs = require('fs')
-const CleanWebpackPlugin = require('clean-webpack-plugin')
+// const CleanWebpackPlugin = require('clean-webpack-plugin')
 const SRC_PATH = path.resolve(__dirname, 'src')
 const DIST_PATH = path.resolve(__dirname, 'build')
 
@@ -28,19 +28,20 @@ module.exports = {
   },
 
   plugins: [
-    new CleanWebpackPlugin(['build'], {
-      root: path.resolve(__dirname),
-      verbose: true,
-      dry: false,
-      //exclude: ["dist/1.chunk.js"]
-    }),
+    // new CleanWebpackPlugin(['build'], {
+    //   root: path.resolve(__dirname),
+    //   verbose: true,
+    //   dry: false,
+    //   //exclude: ["dist/1.chunk.js"]
+    // }),
 
     new webpack.DllReferencePlugin({
       context: __dirname,
+      scope:"ccc",
       /**
        * 在这里引入 manifest 文件
        */
-      manifest: require('./dll/crocodile-manifest.json')
+      manifest: require(path.resolve(path.join(__dirname,'./dll/crocodile.manifest.json')))
     }),
 
     /**

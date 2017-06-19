@@ -5,9 +5,9 @@
 var assign = require("object-assign");
 
 /**
- * 
- * @param {*} source 
- * @param {*} target 
+ * 读取包描述文件的内容
+ * @param {String} source 绑定的开始事件
+ * @param {String} target 绑定的目标事件
  */
 function JoinRequestPlugin(source, target) {
 	this.source = source;

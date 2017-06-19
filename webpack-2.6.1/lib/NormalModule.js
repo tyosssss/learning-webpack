@@ -33,14 +33,19 @@ function asString(buf) {
 }
 
 function contextify(context, request) {
-	return request.split("!").map(function(r) {
-		let rp = path.relative(context, r);
-		if(path.sep === "\\")
-			rp = rp.replace(/\\/g, "/");
-		if(rp.indexOf("../") !== 0)
-			rp = "./" + rp;
-		return rp;
-	}).join("!");
+	return request
+		.split("!")
+		.map(function(r) {
+			let rp = path.relative(context, r);
+			
+			if(path.sep === "\\")
+				rp = rp.replace(/\\/g, "/");
+			
+			if(rp.indexOf("../") !== 0)
+				rp = "./" + rp;
+			
+			return rp;
+		}).join("!");
 }
 
 class NonErrorEmittedError extends WebpackError {
@@ -84,6 +89,11 @@ class NormalModule extends Module {
 		return requestShortener.shorten(this.userRequest);
 	}
 
+	/**
+	 * @param {Object} options
+	 * @param {String} options.context
+	 * @param {String} 
+	 */
 	libIdent(options) {
 		return contextify(options.context, this.userRequest);
 	}

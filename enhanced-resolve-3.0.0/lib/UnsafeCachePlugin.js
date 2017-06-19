@@ -5,6 +5,13 @@
 var createInnerCallback = require("./createInnerCallback");
 var assign = require("object-assign");
 
+/**
+ * 缓存解析结果
+ * @param {String} source 绑定的开始事件
+ * @param {Function} filterPredicate 返回fales表示无需缓存
+ * @param {Object} cache 缓存的解析结果
+ * @param {String} target 绑定的目标事件
+ */
 function UnsafeCachePlugin(source, filterPredicate, cache, target) {
 	this.source = source;
 	this.filterPredicate = filterPredicate;
@@ -49,7 +56,7 @@ UnsafeCachePlugin.prototype.apply = function (resolver) {
 				null,
 
 				/**
-				 * 
+				 * 当after-resolve执行完毕,返回最终的解析结果
 				 * @param {Error} err 
 				 * @param {ResolverRequest} result 
 				 */
