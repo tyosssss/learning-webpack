@@ -21,9 +21,12 @@ class DllReferencePlugin {
 
 		compiler.plugin("before-compile", (params, callback) => {
 			const manifest = this.options.manifest;
-			if(typeof manifest === "string") {
+			
+      // 读取 manifest
+      if(typeof manifest === "string") {
 				params.compilationDependencies.push(manifest);
-				compiler.inputFileSystem.readFile(manifest, function(err, result) {
+				
+        compiler.inputFileSystem.readFile(manifest, function(err, result) {
 					if(err) return callback(err);
 					params["dll reference " + manifest] = JSON.parse(result.toString("utf-8"));
 					return callback();
@@ -38,11 +41,13 @@ class DllReferencePlugin {
 			if(typeof manifest === "string") {
 				manifest = params["dll reference " + manifest];
 			}
+
 			const name = this.options.name || manifest.name;
 			const sourceType = this.options.sourceType || "var";
 			const externals = {};
 			const source = "dll-reference " + name;
-			externals[source] = name;
+			
+      externals[source] = name;
 			params.normalModuleFactory.apply(new ExternalModuleFactoryPlugin(sourceType, externals));
 			params.normalModuleFactory.apply(new DelegatedModuleFactoryPlugin({
 				source: source,

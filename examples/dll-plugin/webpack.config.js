@@ -2,22 +2,17 @@ const path = require('path')
 const webpack = require("webpack")
 const fs = require('fs')
 const CleanWebpackPlugin = require('clean-webpack-plugin')
-const SRC_PATH = path.resolve('src')
-const DIST_PATH = path.resolve('build')
+const SRC_PATH = path.resolve(__dirname, 'src')
+const DIST_PATH = path.resolve(__dirname, 'build')
 
 
 
 module.exports = {
-  verbose: true,
-  progress: true,
-  errorDetails: true,
-
   context: path.resolve(SRC_PATH),
 
   entry: {
-    a: './a.js',
-    b: './b.js',
-    jquery: ['./jquery']
+    'main': './main.js',
+    // 'page1': './1.js'
   },
 
   output: {
@@ -27,7 +22,9 @@ module.exports = {
   },
 
   resolve: {
-    extensions: ['', '.js', '.jsx', '.json']
+    alias: {
+      'Crocodile': './crocodile/vendor.js'
+    }
   },
 
   plugins: [
@@ -38,6 +35,14 @@ module.exports = {
       //exclude: ["dist/1.chunk.js"]
     }),
 
+    new webpack.DllReferencePlugin({
+      context: __dirname,
+      /**
+       * 在这里引入 manifest 文件
+       */
+      manifest: require('./dll/crocodile-manifest.json')
+    }),
+
     /**
      * 提取策略 : 
      * 
@@ -45,9 +50,10 @@ module.exports = {
      * 将jquery模块  --> jquery ( 之前的公共模块都被提取到common , 所以执行Jquery功模块提取时 , 不会存在其他公共模块 )
      * 生成的引导代码被放在seed中
      */
-    new webpack.optimize.CommonsChunkPlugin({
-      names: ['common', 'jquery' , 'seed'],
-      minChunks: 2
-    })
+    // new webpack.optimize.CommonsChunkPlugin({
+    //   // names: ['common', 'jquery', 'seed'],
+    //   names: ['common', 'seed'],
+    //   minChunks: 2
+    // })
   ]
 }

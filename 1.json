@@ -1,0 +1,31 @@
+{
+  "modules": {
+    "byIdentifier": {
+      "jquery.js": 0,
+      "common1.js": 1,
+      "common2.js": 2,
+      "a.js": 3,
+      "multi ./jquery": 4
+    },
+    "usedIds": {
+      "0": 0,
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "4": 4
+    }
+  },
+  "chunks": {
+    "byName": {
+      "a": 0,
+      "jquery": 1,
+      "seed": 2
+    },
+    "byBlocks": {},
+    "usedIds": {
+      "0": 0,
+      "1": 1,
+      "2": 2
+    }
+  }
+}
