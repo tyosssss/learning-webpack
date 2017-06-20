@@ -5,17 +5,25 @@
 var createInnerCallback = require("./createInnerCallback");
 var assign = require("object-assign");
 
+/**
+ * 判断目录是否存在
+ * @param {String} source 绑定的开始事件
+ * @param {String} target 绑定的目标事件
+ */
 function DirectoryExistsPlugin(source, target) {
 	this.source = source;
 	this.target = target;
 }
+
 module.exports = DirectoryExistsPlugin;
 
 DirectoryExistsPlugin.prototype.apply = function(resolver) {
 	var target = this.target;
+
 	resolver.plugin(this.source, function(request, callback) {
 		var fs = this.fileSystem;
 		var directory = request.path;
+		
 		fs.stat(directory, function(err, stat) {
 			if(err || !stat) {
 				if(callback.missing) callback.missing.push(directory);

@@ -3,6 +3,7 @@
 	Author Tobias Koppers @sokra
 */
 var ResolverFactory = require("./ResolverFactory");
+var Resolver = require("./Resolver");
 var assign = require("object-assign");
 
 var NodeJsInputFileSystem = require("./NodeJsInputFileSystem");
@@ -140,6 +141,6 @@ module.exports.create.sync = function createSync(options) {
 
 // Export Resolver, FileSystems and Plugins
 module.exports.ResolverFactory = ResolverFactory;
-
+module.exports.Resolver = Resolver;
 module.exports.NodeJsInputFileSystem = NodeJsInputFileSystem;
 module.exports.CachedInputFileSystem = CachedInputFileSystem;

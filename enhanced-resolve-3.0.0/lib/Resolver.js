@@ -91,7 +91,7 @@ Resolver.prototype.resolve = function resolve(context, path, request, callback) 
 
 			return callback(error);
 		}
-		
+
 		/**
 		 * resource = false | path[?query]
 		 */
@@ -162,6 +162,9 @@ Resolver.prototype.doResolve = function doResolve(type, request, message, callba
 	// emit "resolve-step"
 	resolver.applyPlugins("resolve-step", type, request);
 
+	// console.log("resolve-step")
+	console.log("before-" + type)
+
 	resolver.applyPluginsAsyncSeriesBailResult1(
 		"before-" + type,
 		request,
@@ -185,6 +188,8 @@ Resolver.prototype.doResolve = function doResolve(type, request, message, callba
 			return callback();
 		}
 
+		console.log(type)
+
 		return resolver.applyPluginsParallelBailResult1(
 			type,
 			request,
@@ -201,11 +206,14 @@ Resolver.prototype.doResolve = function doResolve(type, request, message, callba
 	}
 
 	function innerCallback(err, result) {
+
 		if (arguments.length > 0) {
 			if (err) return callback(err);
 			if (result) return callback(null, result);
 			return callback();
 		}
+
+		console.log('after-' + type)
 
 		return resolver.applyPluginsAsyncSeriesBailResult1(
 			"after-" + type,
@@ -246,7 +254,7 @@ Resolver.prototype.doResolve = function doResolve(type, request, message, callba
  */
 Resolver.prototype.parse = function parse(identifier) {
 	if (identifier === "") return null;
-	
+
 	var part = {
 		request: "",
 		query: "",
@@ -256,7 +264,7 @@ Resolver.prototype.parse = function parse(identifier) {
 	};
 
 	var idxQuery = identifier.indexOf("?");
-	
+
 	// 解析路径
 	if (idxQuery == 0) {
 		part.query = identifier;
@@ -270,7 +278,7 @@ Resolver.prototype.parse = function parse(identifier) {
 	// 判断属性
 	if (part.request) {
 		part.module = this.isModule(part.request);
-		
+
 		if (part.directory = this.isDirectory(part.request)) {
 			// 去掉'/'
 			part.request = part.request.substr(0, part.request.length - 1);

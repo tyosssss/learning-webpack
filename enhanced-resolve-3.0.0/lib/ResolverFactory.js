@@ -188,7 +188,7 @@ exports.createResolver = function (options) {
 	plugins.push(new NextPlugin("after-parsed-resolve", "described-resolve"));
 
 	//
-	// 处理别名 , 
+	// 处理别名
 	//
 	alias.forEach(function (item) {
 		plugins.push(new AliasPlugin("described-resolve", item, "resolve"));
@@ -201,17 +201,22 @@ exports.createResolver = function (options) {
 		plugins.push(new AliasFieldPlugin("described-resolve", item, "resolve"));
 	});
 
-	// 专注模块路径处理
+	// 专注模块请求路径
 	plugins.push(new ModuleKindPlugin("after-described-resolve", "raw-module"));
 
-	// 专注
+	// 专注绝对和相对请求路径
 	plugins.push(new JoinRequestPlugin("after-described-resolve", "relative"));
 
-	// raw-module
+
+
+	// 
+	// 处理 模块请求路径
+	//
 	moduleExtensions.forEach(function (item) {
 		plugins.push(new ModuleAppendPlugin("raw-module", item, "module"));
 	})
 
+	// 如果在没有后缀名 && 不强制要求后缀名的情况下 , 可以继续解析
 	if (!enforceModuleExtension)
 		plugins.push(new TryNextPlugin("raw-module", null, "module"));
 
@@ -223,8 +228,16 @@ exports.createResolver = function (options) {
 			plugins.push(new ModulesInRootPlugin("module", item, "resolve"));
 	})
 
-	// relative
+
+
+	// 
+	// 处理 绝对或相对路径
+	//
+	
+	// DescriptionFilePlugin -- 重置资源的相对路径
 	plugins.push(new DescriptionFilePlugin("relative", descriptionFiles, "described-relative"));
+	
+	// 重置资源的相对路径失败 , 继续下面的流程
 	plugins.push(new NextPlugin("after-relative", "described-relative"));
 
 	// described-relative
@@ -275,6 +288,7 @@ exports.createResolver = function (options) {
 
 		if (symlinks)
 			plugins.push(new SymlinkPlugin("file", "relative"));
+		
 		plugins.push(new FileExistsPlugin("file", "existing-file"));
 
 		// existing-file

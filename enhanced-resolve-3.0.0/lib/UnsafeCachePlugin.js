@@ -37,7 +37,7 @@ UnsafeCachePlugin.prototype.apply = function (resolver) {
 
 	resolver.plugin(
 		this.source,
-		function onResolve(request, callback) {
+		function (request, callback) {
 
 			// 如果返回false , 那么不缓存
 			if (!filterPredicate(request)) return callback();

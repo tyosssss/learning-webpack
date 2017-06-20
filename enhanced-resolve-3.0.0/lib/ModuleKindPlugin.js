@@ -16,20 +16,25 @@ function ModuleKindPlugin(source, target) {
 }
 module.exports = ModuleKindPlugin;
 
-ModuleKindPlugin.prototype.apply = function(resolver) {
+ModuleKindPlugin.prototype.apply = function (resolver) {
 	var target = this.target;
-	
-	resolver.plugin(this.source, function(request, callback) {
-		if(!request.module) return callback();
-		
+
+	resolver.plugin(this.source, function (request, callback) {
+		if (!request.module) return callback();
+
 		var obj = assign({}, request);
 		delete obj.module;
 
-		resolver.doResolve(target, obj, "resolve as module", createInnerCallback(function(err, result) {
-			if(arguments.length > 0) return callback(err, result);
+		resolver.doResolve(
+			target,
+			obj,
+			"resolve as module",
+			createInnerCallback(function (err, result) {
+				if (arguments.length > 0) return callback(err, result);
 
-			// Don't allow other alternatives
-			callback(null, null);
-		}, callback));
+				// Don't allow other alternatives
+				callback(null, null);
+			}, callback)
+		);
 	});
 };

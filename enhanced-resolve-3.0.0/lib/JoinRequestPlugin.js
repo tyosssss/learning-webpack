@@ -5,7 +5,7 @@
 var assign = require("object-assign");
 
 /**
- * 读取包描述文件的内容
+ * 链接请求路径 -- 生成请求的绝对路径和相对路径
  * @param {String} source 绑定的开始事件
  * @param {String} target 绑定的目标事件
  */

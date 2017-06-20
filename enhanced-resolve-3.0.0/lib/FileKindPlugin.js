@@ -4,18 +4,28 @@
 */
 var assign = require("object-assign");
 
+/**
+ * 筛选出文件路径
+ * @param {String} source 绑定的开始事件
+ * @param {String} target 绑定的目标事件
+ */
 function FileKindPlugin(source, target) {
 	this.source = source;
 	this.target = target;
 }
+
 module.exports = FileKindPlugin;
 
 FileKindPlugin.prototype.apply = function(resolver) {
 	var target = this.target;
+	
 	resolver.plugin(this.source, function(request, callback) {
-		if(request.directory) return callback();
+		if(request.directory) 
+			return callback();
+		
 		var obj = assign({}, request);
 		delete obj.directory;
+
 		resolver.doResolve(target, obj, null, callback);
 	});
 };

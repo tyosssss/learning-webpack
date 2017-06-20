@@ -25,7 +25,7 @@ DescriptionFilePlugin.prototype.apply = function (resolver) {
 
 	resolver.plugin(this.source, function (request, callback) {
 		var fs = this.fileSystem;			// 文件系统
-		var directory = request.path;	// 读取目录
+		var directory = request.path;	// 读取目录 ( 请求上下文 )
 
 		// 
 		// 从path目录中读取描述文件
@@ -36,6 +36,7 @@ DescriptionFilePlugin.prototype.apply = function (resolver) {
 			// 处理异常
 			//
 			if (err) return callback(err);
+			
 			if (!result) {
 				if (callback.missing) {
 					filenames.forEach(function (filename) {
