@@ -1,10 +1,16 @@
 
 
+require('../dll/crocodile.dll.js')
+
+// require.ensure(["../dll/model.dll.js"],function(){
+  console.log('main')
+// })
+
 
 // require.ensure([], function (require) {
-  require('ccc/crocodile/vendor.js')
+  // let aa= require('ccc/crocodile/crocodile.js')
   // require('UserServer')
 
-  console.log('main')
+  
 // })
 

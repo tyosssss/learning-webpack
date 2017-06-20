@@ -1,4 +1,4 @@
-module.exports =
+var storage_library =
 webpackJsonp_name__library([0],{
 
 /***/ 3:

@@ -1,7 +1,8 @@
 const path = require('path')
-const webpack = require('../../webpack-2.6.1/lib/webpack')
+// const webpack = require('../../webpack-2.6.1/lib/webpack')
+const webpack = require('webpack')
+const CleanWebpackPlugin = require('clean-webpack-plugin')
 const fs = require('fs')
-// const CleanWebpackPlugin = require('clean-webpack-plugin')
 const SRC_PATH = path.resolve(__dirname, 'src')
 const DIST_PATH = path.resolve(__dirname, 'dll')
 
@@ -37,16 +38,16 @@ module.exports = [
       filename: '[name].dll.js',
       chunkFilename: "[name].js",
       library: '[name]_library',
-      libraryTarget: 'commonjs2'
+      // libraryTarget: 'commonjs2'
     },
 
     plugins: [
-      // new CleanWebpackPlugin(['dll'], {
-      //   root: path.resolve(__dirname),
-      //   verbose: true,
-      //   dry: false,
-      //   //exclude: ["dist/1.chunk.js"]
-      // }),
+      new CleanWebpackPlugin(['dll'], {
+        root: path.resolve(__dirname),
+        verbose: true,
+        dry: false,
+        //exclude: ["dist/1.chunk.js"]
+      }),
 
       new webpack.DllPlugin({
         /**

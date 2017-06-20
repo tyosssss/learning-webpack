@@ -1,13 +1,1 @@
-{
-  "name": "crocodile",
-  "content": {
-    "./crocodile/vendor.js": {
-      "id": 0,
-      "meta": {}
-    },
-    "./crocodile/crocodile.js": {
-      "id": 1,
-      "meta": {}
-    }
-  }
-}
+{"name":"crocodile","content":{"./crocodile/vendor.js":{"id":0,"meta":{}},"./crocodile/crocodile.js":{"id":1,"meta":{}}}}

@@ -21,11 +21,11 @@ module.exports = {
     path: DIST_PATH
   },
 
-  resolve: {
-    alias: {
-      'Crocodile': './crocodile/vendor.js'
-    }
-  },
+  // resolve: {
+  //   alias: {
+  //     'Crocodile': './crocodile/vendor.js'
+  //   }
+  // },
 
   plugins: [
     // new CleanWebpackPlugin(['build'], {
@@ -37,11 +37,16 @@ module.exports = {
 
     new webpack.DllReferencePlugin({
       context: __dirname,
-      scope:"ccc",
+
+      scope: "ccc",
+      
+      name:'crocodile_library',
+      // sourceType: 'commonjs2',
+
       /**
        * 在这里引入 manifest 文件
        */
-      manifest: require(path.resolve(path.join(__dirname,'./dll/crocodile.manifest.json')))
+      manifest: require(path.resolve(path.join(__dirname, './dll/crocodile.manifest.json')))
     }),
 
     /**

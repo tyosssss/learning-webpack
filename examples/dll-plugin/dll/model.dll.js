@@ -1,4 +1,4 @@
-module.exports =
+var model_library =
 webpackJsonp_name__library([1],{
 
 /***/ 2:

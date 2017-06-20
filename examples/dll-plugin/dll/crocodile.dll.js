@@ -1,4 +1,4 @@
-module.exports =
+var crocodile_library =
 /******/ (function(modules) { // webpackBootstrap
 /******/ 	// install a JSONP callback for chunk loading
 /******/ 	var parentJsonpFunction = window["webpackJsonp_name__library"];

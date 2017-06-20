@@ -1,4 +1,4 @@
-module.exports =
+var vendor_library =
 webpackJsonp_name__library([2],{
 
 /***/ 7:
