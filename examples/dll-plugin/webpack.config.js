@@ -27,6 +27,14 @@ module.exports = {
   //   }
   // },
 
+  module: {
+    rules: [
+      {
+        loader:'css-loader'
+      }
+    ]
+  },
+
   plugins: [
     // new CleanWebpackPlugin(['build'], {
     //   root: path.resolve(__dirname),
@@ -39,8 +47,8 @@ module.exports = {
       context: __dirname,
 
       scope: "ccc",
-      
-      name:'crocodile_library',
+
+      name: 'crocodile_library',
       // sourceType: 'commonjs2',
 
       /**

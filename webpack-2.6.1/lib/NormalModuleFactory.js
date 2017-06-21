@@ -24,8 +24,7 @@ const RuleSet = require("./RuleSet");
  * 加载器参数
  * @typedef {Object} LoaderParams
  * @property {String} loader 加载器的请求路径
- * @property {Object} options 加载器的选项
- * @property {Dependency[]} dependencies 模块的依赖,即该模块依赖的模块 ( 包括自身 )
+ * @property {String|Object} options 加载器的选项
  */
 
 /**
@@ -113,49 +112,53 @@ class NormalModuleFactory extends Tapable {
         // Ignored
         if (!resolver) return callback();
 
-				/**
-				 * @param {ResolveParams} data 解析器参数
-			 	 * @param {Function} callback 回调函数
-				 */
-        resolver(result, (err, data) => {
-          if (err) return callback(err);
-
-          // Ignored
-          if (!data) return callback();
-
-          // direct module
-          if (typeof data.source === "function") return callback(null, data);
-
-          this.applyPluginsAsyncWaterfall("after-resolve", data, (err, result) => {
+        // 解析请求的路径
+        resolver(
+          result,
+          /**
+           * @param {ResolveParams} data 解析器参数
+           * @param {Function} callback 回调函数
+           */
+          (err, data) => {
             if (err) return callback(err);
 
             // Ignored
-            if (!result)
-              return callback();
+            if (!data) return callback();
 
-            let createdModule = this.applyPluginsBailResult("create-module", result);
+            // direct module
+            if (typeof data.source === "function") return callback(null, data);
 
-            if (!createdModule) {
+            this.applyPluginsAsyncWaterfall("after-resolve", data, (err, result) => {
+              if (err) return callback(err);
 
-              if (!result.request) {
-                return callback(new Error("Empty dependency (no request)"));
+              // Ignored
+              if (!result)
+                return callback();
+
+              let createdModule = this.applyPluginsBailResult("create-module", result);
+
+              if (!createdModule) {
+
+                if (!result.request) {
+                  return callback(new Error("Empty dependency (no request)"));
+                }
+
+                createdModule = new NormalModule(
+                  result.request,
+                  result.userRequest,
+                  result.rawRequest,
+                  result.loaders,
+                  result.resource,
+                  result.parser
+                );
               }
 
-              createdModule = new NormalModule(
-                result.request,
-                result.userRequest,
-                result.rawRequest,
-                result.loaders,
-                result.resource,
-                result.parser
-              );
-            }
+              createdModule = this.applyPluginsWaterfall0("module", createdModule);
 
-            createdModule = this.applyPluginsWaterfall0("module", createdModule);
-
-            return callback(null, createdModule);
-          });
-        });
+              return callback(null, createdModule);
+            });
+          }
+        );
       };
     });
 
@@ -223,7 +226,7 @@ class NormalModuleFactory extends Tapable {
               return callback(null, { resource });
             }
 
-
+            // 解析资源请求
             this.resolvers.normal.resolve(
               contextInfo,
               context,
@@ -238,23 +241,35 @@ class NormalModuleFactory extends Tapable {
             );
           }
         ], (err, results) => {
-          if (err) return callback(err);
+          /**
+           * err : Error
+           * results[0] : LoaderParams[]
+           * results[1] : { resourceResolveData , resource }
+           */
+          if (err) {
+            return callback(err);
+          }
+
           let loaders = results[0];
           const resourceResolveData = results[1].resourceResolveData;
-          
+
           resource = results[1].resource;
 
-          // translate option idents
+          // 处理loader的查询字符串
           try {
-            loaders.forEach(item => {
-              if (typeof item.options === "string" && /^\?/.test(item.options)) {
-                item.options = this.ruleSet.findOptionsByIdent(item.options.substr(1));
+            loaders.forEach(
+              item => {
+                // 查询字符串
+                if (typeof item.options === "string" && /^\?/.test(item.options)) {
+                  item.options = this.ruleSet.findOptionsByIdent(item.options.substr(1));
+                }
               }
-            });
+            );
           } catch (e) {
             return callback(e);
           }
 
+          // 
           if (resource === false) {
             // ignored
             return callback(null,
@@ -394,7 +409,7 @@ class NormalModuleFactory extends Tapable {
 	 * @param {String} context 上下文路径
 	 * @param {{loader , options}[]} array 请求数组
 	 * @param {Resolver} resolver 请求解析器
-	 * @param {Function} callback 回调函数 (err:Error , loaderRequest : String ) = >void
+	 * @param {Function} callback 回调函数 (err:Error , params : LoaderParams[] ) = >void
 	 */
   resolveRequestArray(contextInfo, context, array, resolver, callback) {
     // 没有加载器
@@ -508,7 +523,7 @@ function loaderToIdent(data) {
 /**
  * 识别加载器请求 , 返回加载器参数对象
  * @param {String} resultString 字符串
- * @returns {loader , options} 返回识别的加载器请求
+ * @returns {LoaderParams} 返回识别的加载器请求
  */
 function identToLoaderRequest(resultString) {
   const idx = resultString.indexOf("?");
