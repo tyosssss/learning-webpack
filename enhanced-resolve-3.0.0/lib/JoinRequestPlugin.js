@@ -10,22 +10,22 @@ var assign = require("object-assign");
  * @param {String} target 绑定的目标事件
  */
 function JoinRequestPlugin(source, target) {
-	this.source = source;
-	this.target = target;
+  this.source = source;
+  this.target = target;
 }
 module.exports = JoinRequestPlugin;
 
-JoinRequestPlugin.prototype.apply = function(resolver) {
-	var target = this.target;
+JoinRequestPlugin.prototype.apply = function (resolver) {
+  var target = this.target;
 
-	resolver.plugin(this.source, function(request, callback) {
-		
-		var obj = assign({}, request, {
-			path: resolver.join(request.path, request.request),
-			relativePath: request.relativePath && resolver.join(request.relativePath, request.request),
-			request: undefined
-		});
+  resolver.plugin(this.source, function (request, callback) {
 
-		resolver.doResolve(target, obj, null, callback);
-	});
+    var obj = assign({}, request, {
+      path: resolver.join(request.path, request.request),
+      relativePath: request.relativePath && resolver.join(request.relativePath, request.request),
+      request: undefined
+    });
+
+    resolver.doResolve(target, obj, null, callback);
+  });
 };

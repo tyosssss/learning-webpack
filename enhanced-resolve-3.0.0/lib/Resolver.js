@@ -6,8 +6,8 @@ var Tapable = require("tapable");
 var createInnerCallback = require("./createInnerCallback");
 
 function Resolver(fileSystem) {
-	Tapable.call(this);
-	this.fileSystem = fileSystem;
+  Tapable.call(this);
+  this.fileSystem = fileSystem;
 }
 
 module.exports = Resolver;
@@ -20,15 +20,15 @@ Resolver.prototype.constructor = Resolver;
  * 
  */
 Resolver.prototype.resolveSync = function resolveSync(context, path, request) {
-	var err, result, sync = false;
-	this.resolve(context, path, request, function (e, r) {
-		err = e;
-		result = r;
-		sync = true;
-	});
-	if (!sync) throw new Error("Cannot 'resolveSync' because the fileSystem is not sync. Use 'resolve'!");
-	if (err) throw err;
-	return result;
+  var err, result, sync = false;
+  this.resolve(context, path, request, function (e, r) {
+    err = e;
+    result = r;
+    sync = true;
+  });
+  if (!sync) throw new Error("Cannot 'resolveSync' because the fileSystem is not sync. Use 'resolve'!");
+  if (err) throw err;
+  return result;
 };
 
 /**
@@ -39,81 +39,81 @@ Resolver.prototype.resolveSync = function resolveSync(context, path, request) {
  * @param {Function} callback 回调函数
  */
 Resolver.prototype.resolve = function resolve(context, path, request, callback) {
-	if (arguments.length === 3) {
-		throw new Error("Signature changed: context parameter added");
-	}
+  if (arguments.length === 3) {
+    throw new Error("Signature changed: context parameter added");
+  }
 
-	var resolver = this;
+  var resolver = this;
 
-	var obj = {
-		context: context,
-		path: path,
-		request: request
-	};
+  var obj = {
+    context: context,
+    path: path,
+    request: request
+  };
 
-	var localMissing = [];
-	var missing =
-		callback.missing
-			? {
-				push: function (item) {
-					callback.missing.push(item);
-					localMissing.push(item);
-				}
-			}
-			: localMissing;
+  var localMissing = [];
+  var missing =
+    callback.missing
+      ? {
+        push: function (item) {
+          callback.missing.push(item);
+          localMissing.push(item);
+        }
+      }
+      : localMissing;
 
-	var log = [];
-	var message = "resolve '" + request + "' in '" + path + "'";
+  var log = [];
+  var message = "resolve '" + request + "' in '" + path + "'";
 
-	function writeLog(msg) {
-		log.push(msg);
-	}
+  function writeLog(msg) {
+    log.push(msg);
+  }
 
-	function logAsString() {
-		return log.join("\n");
-	}
+  function logAsString() {
+    return log.join("\n");
+  }
 
-	function onResolved(err, result) {
-		if (callback.log) {
-			for (var i = 0; i < log.length; i++)
-				callback.log(log[i]);
-		}
+  function onResolved(err, result) {
+    if (callback.log) {
+      for (var i = 0; i < log.length; i++)
+        callback.log(log[i]);
+    }
 
-		if (err)
-			return callback(err);
+    if (err)
+      return callback(err);
 
-		if (!result) {
-			var error = new Error("Can't " + message);
-			error.details = logAsString();
-			error.missing = localMissing;
+    if (!result) {
+      var error = new Error("Can't " + message);
+      error.details = logAsString();
+      error.missing = localMissing;
 
-			resolver.applyPlugins("no-resolve", obj, error);
+      resolver.applyPlugins("no-resolve", obj, error);
 
-			return callback(error);
-		}
+      return callback(error);
+    }
 
 		/**
 		 * resource = false | path[?query]
 		 */
-		return callback(
-			null,
-			result.path === false
-				? false
-				: result.path + (result.query || ""),
-			result
-		);
-	}
+    return callback(
+      null,
+      result.path === false
+        ? false
+        : result.path + (result.query || ""),
+      result
+    );
+  }
 
-	return this.doResolve(
-		"resolve",
-		obj,
-		message,
-		createInnerCallback(onResolved, {
-			log: writeLog,
-			missing: missing,
-			stack: callback.stack
-		}, null)
-	);
+  return this.doResolve(
+    "resolve",
+    obj,
+    message,
+    createInnerCallback(onResolved, {
+      log: writeLog,
+      missing: missing,
+      stack: callback.stack
+    }, null)
+  );
 };
 
 /**
@@ -130,121 +130,121 @@ Resolver.prototype.resolve = function resolve(context, path, request, callback) 
  * @param {Function} callback 回调函数
  */
 Resolver.prototype.doResolve = function doResolve(type, request, message, callback) {
-	var resolver = this;
-	var stackLine = type +
-		": (" + request.path + ") " +
-		(request.request || "") +
-		(request.query || "") +
-		(request.directory ? " directory" : "") +
-		(request.module ? " module" : "");
+  var resolver = this;
+  var stackLine = type +
+    ": (" + request.path + ") " +
+    (request.request || "") +
+    (request.query || "") +
+    (request.directory ? " directory" : "") +
+    (request.module ? " module" : "");
 
-	var newStack = [stackLine];
+  var newStack = [stackLine];
 
-	//
-	// 检查是否有循环引用自身的错误
-	//
-	if (callback.stack) {
-		newStack = callback.stack.concat(newStack);
+  //
+  // 检查是否有循环引用自身的错误
+  //
+  if (callback.stack) {
+    newStack = callback.stack.concat(newStack);
 
-		// 循环错误
-		if (callback.stack.indexOf(stackLine) >= 0) {
-			// Prevent recursion
-			var recursionError = new Error("Recursion in resolving\nStack:\n  " + newStack.join("\n  "));
-			recursionError.recursion = true;
+    // 循环错误
+    if (callback.stack.indexOf(stackLine) >= 0) {
+      // Prevent recursion
+      var recursionError = new Error("Recursion in resolving\nStack:\n  " + newStack.join("\n  "));
+      recursionError.recursion = true;
 
-			if (callback.log)
-				callback.log("abort resolving because of recursion");
+      if (callback.log)
+        callback.log("abort resolving because of recursion");
 
-			return callback(recursionError);
-		}
-	}
+      return callback(recursionError);
+    }
+  }
 
-	// emit "resolve-step"
-	resolver.applyPlugins("resolve-step", type, request);
+  // emit "resolve-step"
+  resolver.applyPlugins("resolve-step", type, request);
 
-	// console.log("resolve-step")
-	console.log("before-" + type)
+  // console.log("resolve-step")
+  console.log("before-" + type)
 
-	resolver.applyPluginsAsyncSeriesBailResult1(
-		"before-" + type,
-		request,
-		createInnerCallback(
-			beforeInnerCallback,
-			{
-				log: callback.log,
-				missing: callback.missing,
-				stack: newStack
-			},
-			message && ("before " + message),
-			true
-		)
-	);
+  resolver.applyPluginsAsyncSeriesBailResult1(
+    "before-" + type,
+    request,
+    createInnerCallback(
+      beforeInnerCallback,
+      {
+        log: callback.log,
+        missing: callback.missing,
+        stack: newStack
+      },
+      message && ("before " + message),
+      true
+    )
+  );
 
-	function beforeInnerCallback(err, result) {
-		if (arguments.length > 0) {
-			if (err) return callback(err);
-			if (result) return callback(null, result);
+  function beforeInnerCallback(err, result) {
+    if (arguments.length > 0) {
+      if (err) return callback(err);
+      if (result) return callback(null, result);
 
-			return callback();
-		}
+      return callback();
+    }
 
-		console.log(type)
+    console.log(type)
 
-		return resolver.applyPluginsParallelBailResult1(
-			type,
-			request,
-			createInnerCallback(
-				innerCallback,
-				{
-					log: callback.log,
-					missing: callback.missing,
-					stack: newStack
-				},
-				message
-			)
-		);
-	}
+    return resolver.applyPluginsParallelBailResult1(
+      type,
+      request,
+      createInnerCallback(
+        innerCallback,
+        {
+          log: callback.log,
+          missing: callback.missing,
+          stack: newStack
+        },
+        message
+      )
+    );
+  }
 
-	function innerCallback(err, result) {
+  function innerCallback(err, result) {
 
-		if (arguments.length > 0) {
-			if (err) return callback(err);
-			if (result) return callback(null, result);
-			return callback();
-		}
+    if (arguments.length > 0) {
+      if (err) return callback(err);
+      if (result) return callback(null, result);
+      return callback();
+    }
 
-		console.log('after-' + type)
+    console.log('after-' + type)
 
-		return resolver.applyPluginsAsyncSeriesBailResult1(
-			"after-" + type,
-			request,
-			createInnerCallback(
-				afterInnerCallback,
-				{
-					log: callback.log,
-					missing: callback.missing,
-					stack: newStack
-				},
-				message && ("after " + message),
-				true
-			)
-		);
-	}
+    return resolver.applyPluginsAsyncSeriesBailResult1(
+      "after-" + type,
+      request,
+      createInnerCallback(
+        afterInnerCallback,
+        {
+          log: callback.log,
+          missing: callback.missing,
+          stack: newStack
+        },
+        message && ("after " + message),
+        true
+      )
+    );
+  }
 
 	/**
 	 * 当所有的innerCallback执行完毕之后 , 调用的回调函数
 	 * @param {Error} err 
 	 * @param {ResolverRequest} result 
 	 */
-	function afterInnerCallback(err, result) {
-		if (arguments.length > 0) {
-			if (err) return callback(err);
-			if (result) return callback(null, result);
-			return callback();
-		}
+  function afterInnerCallback(err, result) {
+    if (arguments.length > 0) {
+      if (err) return callback(err);
+      if (result) return callback(null, result);
+      return callback();
+    }
 
-		return callback();
-	}
+    return callback();
+  }
 };
 
 /**
@@ -253,39 +253,39 @@ Resolver.prototype.doResolve = function doResolve(type, request, message, callba
  * @returns {ResolverRequest} 返回解析器请求路径
  */
 Resolver.prototype.parse = function parse(identifier) {
-	if (identifier === "") return null;
+  if (identifier === "") return null;
 
-	var part = {
-		request: "",
-		query: "",
-		module: false,
-		directory: false,
-		file: false
-	};
+  var part = {
+    request: "",
+    query: "",
+    module: false,
+    directory: false,
+    file: false
+  };
 
-	var idxQuery = identifier.indexOf("?");
+  var idxQuery = identifier.indexOf("?");
 
-	// 解析路径
-	if (idxQuery == 0) {
-		part.query = identifier;
-	} else if (idxQuery > 0) {
-		part.request = identifier.slice(0, idxQuery);
-		part.query = identifier.slice(idxQuery);
-	} else {
-		part.request = identifier;
-	}
+  // 解析路径
+  if (idxQuery == 0) {
+    part.query = identifier;
+  } else if (idxQuery > 0) {
+    part.request = identifier.slice(0, idxQuery);
+    part.query = identifier.slice(idxQuery);
+  } else {
+    part.request = identifier;
+  }
 
-	// 判断属性
-	if (part.request) {
-		part.module = this.isModule(part.request);
+  // 判断属性
+  if (part.request) {
+    part.module = this.isModule(part.request);
 
-		if (part.directory = this.isDirectory(part.request)) {
-			// 去掉'/'
-			part.request = part.request.substr(0, part.request.length - 1);
-		}
-	}
+    if (part.directory = this.isDirectory(part.request)) {
+      // 去掉'/'
+      part.request = part.request.substr(0, part.request.length - 1);
+    }
+  }
 
-	return part;
+  return part;
 };
 
 var notModuleRegExp = /^\.$|^\.[\\\/]|^\.\.$|^\.\.[\/\\]|^\/|^[A-Z]:[\\\/]/i;
@@ -295,7 +295,7 @@ var notModuleRegExp = /^\.$|^\.[\\\/]|^\.\.$|^\.\.[\/\\]|^\/|^[A-Z]:[\\\/]/i;
  * @parma {String} path
  */
 Resolver.prototype.isModule = function isModule(path) {
-	return !notModuleRegExp.test(path);
+  return !notModuleRegExp.test(path);
 };
 
 var directoryRegExp = /[\/\\]$/i;
@@ -305,7 +305,7 @@ var directoryRegExp = /[\/\\]$/i;
  * @parma {String} path
  */
 Resolver.prototype.isDirectory = function isDirectory(path) {
-	return directoryRegExp.test(path);
+  return directoryRegExp.test(path);
 };
 
 var memoryFsJoin = require("memory-fs/lib/join");
@@ -315,13 +315,13 @@ var memoizedJoin = {};
  * 
  */
 Resolver.prototype.join = function (path, request) {
-	var memoizeKey = path + '|$' + request;
+  var memoizeKey = path + '|$' + request;
 
-	if (!memoizedJoin[memoizeKey]) {
-		memoizedJoin[memoizeKey] = memoryFsJoin(path, request);
-	}
+  if (!memoizedJoin[memoizeKey]) {
+    memoizedJoin[memoizeKey] = memoryFsJoin(path, request);
+  }
 
-	return memoizedJoin[memoizeKey];
+  return memoizedJoin[memoizeKey];
 };
 
 /**

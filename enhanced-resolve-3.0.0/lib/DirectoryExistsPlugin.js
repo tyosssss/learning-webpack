@@ -30,11 +30,13 @@ DirectoryExistsPlugin.prototype.apply = function(resolver) {
 				if(callback.log) callback.log(directory + " doesn't exist");
 				return callback();
 			}
+      
 			if(!stat.isDirectory()) {
 				if(callback.missing) callback.missing.push(directory);
 				if(callback.log) callback.log(directory + " is not a directory");
 				return callback();
 			}
+
 			this.doResolve(target, request, "existing directory", callback);
 		}.bind(this));
 	});

@@ -8,6 +8,12 @@ var DescriptionFileUtils = require("./DescriptionFileUtils");
 var forEachBail = require("./forEachBail");
 var createInnerCallback = require("./createInnerCallback");
 
+/**
+ * 从concrod字段读取后缀名配置
+ * @param {String} source 绑定的开始事件
+ * @param {Object} options 选项
+ * @param {String} target 绑定的目标事件
+ */
 function ConcordExtensionsPlugin(source, options, target) {
 	this.source = source;
 	this.options = options;
