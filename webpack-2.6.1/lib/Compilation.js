@@ -40,15 +40,27 @@ function byId(a, b) {
   return 0;
 }
 
+/**
+ * 
+ * @param {Array} variables 
+ * @param {Function} fn 
+ */
 function iterationBlockVariable(variables, fn) {
   for (let indexVariable = 0; indexVariable < variables.length; indexVariable++) {
+
     let varDep = variables[indexVariable].dependencies;
+
     for (let indexVDep = 0; indexVDep < varDep.length; indexVDep++) {
       fn(varDep[indexVDep]);
     }
   }
 }
 
+/**
+ * 遍历数组执行指定函数
+ * @param {Array[]} arr 
+ * @param {Function} fn 
+ */
 function iterationOfArrayCallback(arr, fn) {
   for (let index = 0; index < arr.length; index++) {
     fn(arr[index]);
@@ -356,11 +368,17 @@ class Compilation extends Tapable {
       building.forEach(cb => cb(err));
     }
 
+    //
+    // 构建模块
+    //
     module.build(
       this.options,
       this, this.resolvers.normal,
       this.inputFileSystem,
       (error) => {
+        //
+        // 处理错误
+        //
         const errors = module.errors;
         for (let indexError = 0; indexError < errors.length; indexError++) {
           const err = errors[indexError];
@@ -372,6 +390,9 @@ class Compilation extends Tapable {
             this.errors.push(err);
         }
 
+        //
+        // 处理警告
+        //
         const warnings = module.warnings;
         for (let indexWarning = 0; indexWarning < warnings.length; indexWarning++) {
           const war = warnings[indexWarning];
@@ -379,22 +400,31 @@ class Compilation extends Tapable {
           war.dependencies = dependencies;
           this.warnings.push(war);
         }
+
+        // 
+        // 按出现位置排序
+        //
         module.dependencies.sort(Dependency.compare);
+
         if (error) {
           this.applyPlugins2("failed-module", module, error);
           return callback(error);
         }
+
         this.applyPlugins1("succeed-module", module);
+
+        // 执行回调函数
         return callback();
       });
   }
 
   /**
-	 * 处理模块依赖
+	 * 处理模块的依赖
 	 * @param {Module} module 
-	 * @param {*} callback 
+	 * @param {Function} callback 
 	 */
   processModuleDependencies(module, callback) {
+    // 整合的依赖
     const dependencies = [];
 
     function addDependency(dep) {
@@ -403,6 +433,7 @@ class Compilation extends Tapable {
           return dependencies[i].push(dep);
         }
       }
+
       dependencies.push([dep]);
     }
 
@@ -410,9 +441,11 @@ class Compilation extends Tapable {
       if (block.dependencies) {
         iterationOfArrayCallback(block.dependencies, addDependency);
       }
+
       if (block.blocks) {
         iterationOfArrayCallback(block.blocks, addDependenciesBlock);
       }
+
       if (block.variables) {
         iterationBlockVariable(block.variables, addDependency);
       }
@@ -420,7 +453,14 @@ class Compilation extends Tapable {
 
     addDependenciesBlock(module);
 
-    this.addModuleDependencies(module, dependencies, this.bail, null, true, callback);
+    this.addModuleDependencies(
+      module,
+      dependencies,
+      this.bail,
+      null,
+      true,
+      callback
+    );
   }
 
 	/**
@@ -436,6 +476,9 @@ class Compilation extends Tapable {
     let _this = this;
     const start = _this.profile && Date.now();
 
+    //
+    // 获得依赖对应的模块工厂
+    //
     const factories = [];
     for (let i = 0; i < dependencies.length; i++) {
       const factory = _this.dependencyFactories.get(dependencies[i][0].constructor);
@@ -444,6 +487,10 @@ class Compilation extends Tapable {
       }
       factories[i] = [factory, dependencies[i]];
     }
+
+    //
+    // 并发构建所有模块
+    //
     asyncLib.forEach(factories, function iteratorFactory(item, callback) {
       const dependencies = item[1];
 
@@ -456,6 +503,7 @@ class Compilation extends Tapable {
           callback();
         }
       };
+
       const warningAndCallback = function warningAndCallback(err) {
         err.origin = module;
         _this.warnings.push(err);
@@ -463,120 +511,126 @@ class Compilation extends Tapable {
       };
 
       const factory = item[0];
-      factory.create({
-        contextInfo: {
-          issuer: module.nameForCondition && module.nameForCondition(),
-          compiler: _this.compiler.name
+
+      //
+      // 创建模块
+      //
+      factory.create(
+        {
+          contextInfo: {
+            issuer: module.nameForCondition && module.nameForCondition(),
+            compiler: _this.compiler.name
+          },
+          context: module.context,
+          dependencies: dependencies
         },
-        context: module.context,
-        dependencies: dependencies
-      }, function factoryCallback(err, dependentModule) {
-        let afterFactory;
+        function factoryCallback(err, dependentModule) {
+          let afterFactory;
 
-        function isOptional() {
-          return dependencies.filter(d => !d.optional).length === 0;
-        }
-
-        function errorOrWarningAndCallback(err) {
-          if (isOptional()) {
-            return warningAndCallback(err);
-          } else {
-            return errorAndCallback(err);
-          }
-        }
-
-        function iterationDependencies(depend) {
-          for (let index = 0; index < depend.length; index++) {
-            const dep = depend[index];
-            dep.module = dependentModule;
-            dependentModule.addReason(module, dep);
-          }
-        }
-
-        if (err) {
-          return errorOrWarningAndCallback(new ModuleNotFoundError(module, err, dependencies));
-        }
-        if (!dependentModule) {
-          return process.nextTick(callback);
-        }
-        if (_this.profile) {
-          if (!dependentModule.profile) {
-            dependentModule.profile = {};
-          }
-          afterFactory = Date.now();
-          dependentModule.profile.factory = afterFactory - start;
-        }
-
-        dependentModule.issuer = module;
-        const newModule = _this.addModule(dependentModule, cacheGroup);
-
-        if (!newModule) { // from cache
-          dependentModule = _this.getModule(dependentModule);
-
-          if (dependentModule.optional) {
-            dependentModule.optional = isOptional();
+          function isOptional() {
+            return dependencies.filter(d => !d.optional).length === 0;
           }
 
-          iterationDependencies(dependencies);
-
-          if (_this.profile) {
-            if (!module.profile) {
-              module.profile = {};
-            }
-            const time = Date.now() - start;
-            if (!module.profile.dependencies || time > module.profile.dependencies) {
-              module.profile.dependencies = time;
+          function errorOrWarningAndCallback(err) {
+            if (isOptional()) {
+              return warningAndCallback(err);
+            } else {
+              return errorAndCallback(err);
             }
           }
 
-          return process.nextTick(callback);
-        }
-
-        if (newModule instanceof Module) {
-          if (_this.profile) {
-            newModule.profile = dependentModule.profile;
+          function iterationDependencies(depend) {
+            for (let index = 0; index < depend.length; index++) {
+              const dep = depend[index];
+              dep.module = dependentModule;
+              dependentModule.addReason(module, dep);
+            }
           }
 
-          newModule.optional = isOptional();
-          newModule.issuer = dependentModule.issuer;
-          dependentModule = newModule;
-
-          iterationDependencies(dependencies);
-
-          if (_this.profile) {
-            const afterBuilding = Date.now();
-            module.profile.building = afterBuilding - afterFactory;
+          if (err) {
+            return errorOrWarningAndCallback(new ModuleNotFoundError(module, err, dependencies));
           }
-
-          if (recursive) {
-            return process.nextTick(_this.processModuleDependencies.bind(_this, dependentModule, callback));
-          } else {
+          if (!dependentModule) {
             return process.nextTick(callback);
           }
-        }
-
-        dependentModule.optional = isOptional();
-
-        iterationDependencies(dependencies);
-
-        _this.buildModule(dependentModule, isOptional(), module, dependencies, err => {
-          if (err) {
-            return errorOrWarningAndCallback(err);
-          }
-
           if (_this.profile) {
-            const afterBuilding = Date.now();
-            dependentModule.profile.building = afterBuilding - afterFactory;
+            if (!dependentModule.profile) {
+              dependentModule.profile = {};
+            }
+            afterFactory = Date.now();
+            dependentModule.profile.factory = afterFactory - start;
           }
 
-          if (recursive) {
-            _this.processModuleDependencies(dependentModule, callback);
-          } else {
-            return callback();
+          dependentModule.issuer = module;
+          const newModule = _this.addModule(dependentModule, cacheGroup);
+
+          if (!newModule) { // from cache
+            dependentModule = _this.getModule(dependentModule);
+
+            if (dependentModule.optional) {
+              dependentModule.optional = isOptional();
+            }
+
+            iterationDependencies(dependencies);
+
+            if (_this.profile) {
+              if (!module.profile) {
+                module.profile = {};
+              }
+              const time = Date.now() - start;
+              if (!module.profile.dependencies || time > module.profile.dependencies) {
+                module.profile.dependencies = time;
+              }
+            }
+
+            return process.nextTick(callback);
           }
+
+          if (newModule instanceof Module) {
+            if (_this.profile) {
+              newModule.profile = dependentModule.profile;
+            }
+
+            newModule.optional = isOptional();
+            newModule.issuer = dependentModule.issuer;
+            dependentModule = newModule;
+
+            iterationDependencies(dependencies);
+
+            if (_this.profile) {
+              const afterBuilding = Date.now();
+              module.profile.building = afterBuilding - afterFactory;
+            }
+
+            if (recursive) {
+              return process.nextTick(_this.processModuleDependencies.bind(_this, dependentModule, callback));
+            } else {
+              return process.nextTick(callback);
+            }
+          }
+
+          dependentModule.optional = isOptional();
+
+          iterationDependencies(dependencies);
+
+          _this.buildModule(dependentModule, isOptional(), module, dependencies, err => {
+            if (err) {
+              return errorOrWarningAndCallback(err);
+            }
+
+            if (_this.profile) {
+              const afterBuilding = Date.now();
+              dependentModule.profile.building = afterBuilding - afterFactory;
+            }
+
+            if (recursive) {
+              _this.processModuleDependencies(dependentModule, callback);
+            } else {
+              return callback();
+            }
+          });
+
         });
-
-      });
     }, function finalCallbackAddModuleDependencies(err) {
       // In V8, the Error objects keep a reference to the functions on the stack. These warnings &
       // errors are created inside closures that keep a reference to the Compilation, so errors are

@@ -10,6 +10,9 @@ class Dependency {
 		this.module = null;
 	}
 
+	/**
+	 * 判断两个资源是否相等
+	 */
 	isEqualResource() {
 		return false;
 	}

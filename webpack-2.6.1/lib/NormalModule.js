@@ -123,13 +123,14 @@ class NormalModule extends Module {
   }
 
   /**
+   * 获得模块名
    * 
-   * 
-   * @returns 
+   * @returns {String}
    * @memberof NormalModule
    */
   nameForCondition() {
     const idx = this.resource.indexOf("?");
+    
     if (idx >= 0) return this.resource.substr(0, idx);
     return this.resource;
   }
@@ -345,12 +346,12 @@ class NormalModule extends Module {
   }
 
   /**
+   * 创建数据源实例
    * 
-   * 
-   * @param {any} source 
-   * @param {any} resourceBuffer 
-   * @param {any} sourceMap 
-   * @returns 
+   * @param {String} source 原始数据
+   * @param {Buffer} resourceBuffer 资源的字节流
+   * @param {String} sourceMap 原始数据的Map
+   * @returns {Source}
    * @memberof NormalModule
    */
   createSource(source, resourceBuffer, sourceMap) {

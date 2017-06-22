@@ -35,6 +35,11 @@ function _splitCode(code) {
 	return result;
 }
 
+/**
+ * 
+ * @param {String} value 
+ * @param {*} name 
+ */
 function OriginalSource(value, name) {
 	Source.call(this);
 	this._value = value;
