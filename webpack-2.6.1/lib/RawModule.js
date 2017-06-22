@@ -8,8 +8,17 @@ const Module = require("./Module");
 const OriginalSource = require("webpack-sources").OriginalSource;
 const RawSource = require("webpack-sources").RawSource;
 
+/**
+ * 
+ */
 module.exports = class RawModule extends Module {
 
+  /**
+   * 
+   * @param {String} source 
+   * @param {String} identifier 
+   * @param {String} readableIdentifier 
+   */
 	constructor(source, identifier, readableIdentifier) {
 		super();
 		this.sourceStr = source;

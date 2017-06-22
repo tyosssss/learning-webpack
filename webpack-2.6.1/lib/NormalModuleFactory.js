@@ -89,8 +89,8 @@ class NormalModuleFactory extends Tapable {
     this.context = context || "";
 
 		/**
-		 * 
-		 * @type Map<>
+		 * 缓存解析器
+		 * @type Map<indent:String , parser:Parse>
 		 */
     this.parserCache = {};
 
@@ -101,48 +101,60 @@ class NormalModuleFactory extends Tapable {
 			/**
 			 * factory
 			 * @param {ResolveParams} params 参数
-			 * @param {Function} calback 回调函数
+			 * @param {Function} onModuleCreated 当模块创建完成之后触发的回调函数
 			 */
-      return (result, callback) => {
+      return (result, onModuleCreated) => {
         /* beautify preserve:end */
 
         // 创建resolver
         let resolver = this.applyPluginsWaterfall0("resolver", null);
 
         // Ignored
-        if (!resolver) return callback();
+        if (!resolver) {
+          return onModuleCreated();
+        }
 
-        // 解析请求的路径
+
         resolver(
           result,
+
           /**
-           * @param {ResolveParams} data 解析器参数
-           * @param {Function} callback 回调函数
+           * 解析请求的路径
+           * @param {ResolveResult} data 解析器参数
            */
           (err, data) => {
-            if (err) return callback(err);
+            /**
+             * 解析完毕
+             */
+            if (err) {
+              return onModuleCreated(err);
+            }
 
             // Ignored
-            if (!data) return callback();
+            if (!data) {
+              return onModuleCreated();
+            }
 
             // direct module
-            if (typeof data.source === "function") return callback(null, data);
+            if (typeof data.source === "function") {
+              return onModuleCreated(null, data);
+            }
 
             this.applyPluginsAsyncWaterfall("after-resolve", data, (err, result) => {
-              if (err) return callback(err);
+              if (err) return onModuleCreated(err);
 
               // Ignored
               if (!result)
-                return callback();
+                return onModuleCreated();
 
               let createdModule = this.applyPluginsBailResult("create-module", result);
 
               if (!createdModule) {
-
                 if (!result.request) {
-                  return callback(new Error("Empty dependency (no request)"));
+                  return onModuleCreated(new Error("Empty dependency (no request)"));
                 }
 
+                // 创建模块
                 createdModule = new NormalModule(
                   result.request,
                   result.userRequest,
@@ -155,7 +167,7 @@ class NormalModuleFactory extends Tapable {
 
               createdModule = this.applyPluginsWaterfall0("module", createdModule);
 
-              return callback(null, createdModule);
+              return onModuleCreated(null, createdModule);
             });
           }
         );
@@ -166,24 +178,21 @@ class NormalModuleFactory extends Tapable {
     // 创建解析器
     //
     this.plugin("resolver", function () {
-      /* beautify preserve:start */
-      // js-beautify consider to concat "return" and "("
-      // but it сontradicts eslint rule (keyword-spacing)
-
 			/**
-			 * resolver
+			 * 解析路径 , 返回与资源有关的所有路径信息以及对应的解析器
+       * 
 			 * @param {ResolveParams} 解析器参数
-			 * @param {Function} callback 回调函数
+			 * @param {Function} onResolved 当解析完成时的毁掉韩式
 			 */
-      return (data, callback) => {
+      return (data, onResolved) => {
         /* beautify preserve:end */
         const contextInfo = data.contextInfo;
         const context = data.context;
         const request = data.request;
 
-        const noPrePostAutoLoaders = /^!!/.test(request);	// 匹配 ^!!       true = 
-        const noAutoLoaders = /^-?!/.test(request);				// 匹配 ^-! , ^!  true =
-        const noPostAutoLoaders = /^-!/.test(request);		// 匹配 ^-!       true = 
+        const noPrePostAutoLoaders = /^!!/.test(request);	// 匹配 ^!!       true = 忽略 pre , auto , post 
+        const noAutoLoaders = /^-?!/.test(request);				// 匹配 ^-! , ^!  true = 忽略 post
+        const noPostAutoLoaders = /^-!/.test(request);		// 匹配 ^-!       true = 忽略 auto , post
 
 				/**
 				 * 路径元素
@@ -205,7 +214,7 @@ class NormalModuleFactory extends Tapable {
 
         asyncLib.parallel([
           //
-          // 解析加载器的路径
+          // 解析行内加载器的路径
           //
           callback => {
             this.resolveRequestArray(
@@ -218,7 +227,7 @@ class NormalModuleFactory extends Tapable {
           },
 
           //
-          // 解析资源的路径
+          // 解析请求中的资源请求路径
           // 
           callback => {
             // 没有请求资源的情况
@@ -250,12 +259,17 @@ class NormalModuleFactory extends Tapable {
             return callback(err);
           }
 
+          /**
+           * 存储加载器信息
+           */
           let loaders = results[0];
           const resourceResolveData = results[1].resourceResolveData;
 
           resource = results[1].resource;
 
-          // 处理loader的查询字符串
+          // 
+          // 处理特殊参数
+          //
           try {
             loaders.forEach(
               item => {
@@ -266,13 +280,13 @@ class NormalModuleFactory extends Tapable {
               }
             );
           } catch (e) {
-            return callback(e);
+            return onResolved(e);
           }
 
           // 
           if (resource === false) {
             // ignored
-            return callback(null,
+            return onResolved(null,
               new RawModule(
                 "/* (ignored) */",
                 `ignored ${context} ${request}`,
@@ -281,6 +295,7 @@ class NormalModuleFactory extends Tapable {
             );
           }
 
+          // 生成userRequest
           const userRequest = loaders
             .map(loaderToIdent)
             .concat([resource])
@@ -295,10 +310,18 @@ class NormalModuleFactory extends Tapable {
             resourcePath = resourcePath.substr(0, queryIndex);
           }
 
+          // 执行规则 , 获得结果
           const result = this.ruleSet.exec({
+            // 请求文件的绝对路径
             resource: resourcePath,
+
+            // 请求文件的查询字符串
             resourceQuery,
+
+            // 引用模块的绝对路径
             issuer: contextInfo.issuer,
+
+            // 解析器名称
             compiler: contextInfo.compiler
           });
 
@@ -307,10 +330,12 @@ class NormalModuleFactory extends Tapable {
           const useLoaders = [];
           const useLoadersPre = [];
 
+          //
+          // 分类加载器
+          //
           result.forEach(r => {
             if (r.type === "use") {
-              if (r.enforce === "post" && !noPostAutoLoaders
-                && !noPrePostAutoLoaders)
+              if (r.enforce === "post" && !noPostAutoLoaders && !noPrePostAutoLoaders)
                 useLoadersPost.push(r.value);
               else if (r.enforce === "pre" && !noPrePostAutoLoaders)
                 useLoadersPre.push(r.value);
@@ -322,24 +347,100 @@ class NormalModuleFactory extends Tapable {
           });
 
           asyncLib.parallel([
-            this.resolveRequestArray.bind(this, contextInfo, this.context, useLoadersPost, this.resolvers.loader),
-            this.resolveRequestArray.bind(this, contextInfo, this.context, useLoaders, this.resolvers.loader),
-            this.resolveRequestArray.bind(this, contextInfo, this.context, useLoadersPre, this.resolvers.loader)
+            //
+            // 解析后缀加载器的路径
+            //
+            this.resolveRequestArray.bind(this,
+              contextInfo,
+              this.context,
+              useLoadersPost,
+              this.resolvers.loader
+            ),
+
+            //
+            // 解析普通加载器的路径
+            //
+            this.resolveRequestArray.bind(this,
+              contextInfo,
+              this.context,
+              useLoaders,
+              this.resolvers.loader
+            ),
+
+            //
+            // 解析前置加载器的路径
+            //
+            this.resolveRequestArray.bind(this,
+              contextInfo,
+              this.context,
+              useLoadersPre,
+              this.resolvers.loader
+            )
           ], (err, results) => {
-            if (err) return callback(err);
+            // 发生错误 , 中断执行
+            if (err) {
+              return onResolved(err);
+            }
+
+            // 
+            // 加载器的排序顺序 [post , inner , normal , pre]
+            //
             loaders = results[0].concat(loaders, results[1], results[2]);
 
-            // debugger
             process.nextTick(() => {
-              callback(null, {
+              onResolved(null, {
+                /**
+                 * 模块的上下文路径  ( 所在目录的绝对路径 )
+                 * @type {String}
+                 */
                 context: context,
+
+                /**
+                 * 请求的完整绝对路径 ( 包含所有加载器的请求路径 )
+                 * @type {String}
+                 */
                 request: loaders.map(loaderToIdent).concat([resource]).join("!"),
+
+                /**
+                 * 请求的依赖
+                 * @type {Dependency[]}
+                 */
                 dependencies: data.dependencies,
+
+                /**
+                 * 用户请求的绝对路径
+                 * @type {String}
+                 */
                 userRequest,
+
+                /**
+                 * 原始的请求路径
+                 * @type {String}
+                 */
                 rawRequest: request,
+
+                /**
+                 * 所有的加载器配置
+                 * @type {{ident : String , loader : String , options : String|Object }[]}
+                 */
                 loaders,
+
+                /**
+                 * 模块对应的资源文件的绝对路径 ( 包括查询字符串 )
+                 * @type {String}
+                 */
                 resource,
+
+                /**
+                 * 路径解析器返回的数据
+                 * @type {Object}
+                 */
                 resourceResolveData,
+
+                /**
+                 * 代码解析器
+                 * @type {Parser}
+                 */
                 parser: this.getParser(settings.parser)
               });
             });
@@ -352,15 +453,15 @@ class NormalModuleFactory extends Tapable {
 	/**
 	 * 创建模块
 	 * @param {ModuleInfo} data 模块信息
-	 * @param {Function} callback 回调函数 (err:Error,module:Module)=>void
+	 * @param {Function} onCreated 当创建完成时的触发的回调函数 (err:Error,module:Module)=>void
 	 */
-  create(data, callback) {
+  create(data, onCreated) {
     const dependencies = data.dependencies;
     const cacheEntry = dependencies[0].__NormalModuleFactoryCache;
 
     // 如果已经缓存
     if (cacheEntry) {
-      return callback(null, cacheEntry);
+      return onCreated(null, cacheEntry);
     }
 
     const context = data.context || this.context; // 请求上下文路径
@@ -378,27 +479,27 @@ class NormalModuleFactory extends Tapable {
       resolverParams,
       (err, result) => {
         // before-resolve中发生错误 , 那么直接返回
-        if (err) return callback(err);
+        if (err) return onCreated(err);
 
         // result == null , 所有需要忽略该模块 , 那么直接返回null
-        if (!result) return callback();
+        if (!result) return onCreated();
 
         // 创建module factory
         const factory = this.applyPluginsWaterfall0("factory", null);
 
         // Ignored
-        if (!factory) return callback();
+        if (!factory) return onCreated();
 
         // 创建模块
         factory(result, (err, module) => {
-          if (err) return callback(err);
+          if (err) return onCreated(err);
 
           // 如果模块需要缓存 , 那么就将其缓存在依赖对象中
           if (module && this.cachePredicate(module)) {
             dependencies.forEach(d => d.__NormalModuleFactoryCache = module);
           }
 
-          callback(null, module);
+          onCreated(null, module);
         });
       });
   }
@@ -473,29 +574,36 @@ class NormalModuleFactory extends Tapable {
   }
 
 	/**
-	 * 
+	 * 获得代码解析器
 	 * @param {*} parserOptions 
 	 */
   getParser(parserOptions) {
     let ident = "null";
+
     if (parserOptions) {
       if (parserOptions.ident)
         ident = parserOptions.ident;
       else
         ident = JSON.stringify(parserOptions);
     }
+
     const parser = this.parserCache[ident];
+
     if (parser)
       return parser;
+
     return this.parserCache[ident] = this.createParser(parserOptions);
   }
 
 	/**
+   * 创建代码解析器
 	 * @param {*} parserOptions 
 	 */
   createParser(parserOptions) {
     const parser = new Parser();
+
     this.applyPlugins2("parser", parser, parserOptions || {});
+
     return parser;
   }
 }

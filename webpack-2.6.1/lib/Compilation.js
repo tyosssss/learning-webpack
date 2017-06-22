@@ -137,130 +137,261 @@ class Compilation extends Tapable {
     this.dependencyTemplates = new Map();
   }
 
-  /**
-   * 
-   * 
-   * @returns 
-   * 
-   * @memberof Compilation
-   */
-  getStats() {
-    return new Stats(this);
-  }
+	/**
+	 * 添加入口
+	 * @param {String} context 上下文路径
+	 * @param {Dependency} entry 入口模块依赖
+	 * @param {String} name 入口的名称
+	 * @param {Function} callback 回调函数 
+	 */
+  addEntry(context, entry, name, callback) {
+    const slot = {
+      name: name,
+      module: null
+    };
 
-  templatesPlugin(name, fn) {
-    this.mainTemplate.plugin(name, fn);
-    this.chunkTemplate.plugin(name, fn);
+    // add 预加载块
+    this.preparedChunks.push(slot);
+
+    // 以entry为起点 , 将引用到的所有模块
+    this._addModuleChain(
+      context,
+      entry,
+      (module) => {
+        entry.module = module;
+        this.entries.push(module);
+        module.issuer = null;
+      },
+      (err, module) => {
+        if (err) {
+          return callback(err);
+        }
+
+        if (module) {
+          slot.module = module;
+        } else {
+          const idx = this.preparedChunks.indexOf(slot);
+          this.preparedChunks.splice(idx, 1);
+        }
+
+        return callback(null, module);
+      });
   }
 
 	/**
-	 * 添加模块
-	 * @param {Module} module 模块
-	 * @param {String} cacheGroup 缓存组名
-	 * @returns {Boolean} true=新增;false=读取缓存
+	 * 
+	 * @param {String} context 
+	 * @param {Dependency} dependency 
+	 * @param {Function} callback 
 	 */
-  addModule(module, cacheGroup) {
-    const identifier = module.identifier();
-    if (this._modules[identifier]) {
-      return false;
-    }
-    const cacheName = (cacheGroup || "m") + identifier;
-    if (this.cache && this.cache[cacheName]) {
-      const cacheModule = this.cache[cacheName];
+  prefetch(context, dependency, callback) {
+    this._addModuleChain(context, dependency, module => {
 
-      let rebuild = true;
-      if (!cacheModule.error &&
-        cacheModule.cacheable &&
-        this.fileTimestamps &&
-        this.contextTimestamps) {
-        rebuild = cacheModule.needRebuild(this.fileTimestamps, this.contextTimestamps);
-      }
+      module.prefetched = true;
+      module.issuer = null;
 
-      if (!rebuild) {
-        cacheModule.disconnect();
-        this._modules[identifier] = cacheModule;
-        this.modules.push(cacheModule);
-        cacheModule.errors.forEach(err => this.errors.push(err), this);
-        cacheModule.warnings.forEach(err => this.warnings.push(err), this);
-        return cacheModule;
-      } else {
-        module.lastId = cacheModule.id;
-      }
-    }
-    module.unbuild();
-    this._modules[identifier] = module;
-    if (this.cache) {
-      this.cache[cacheName] = module;
-    }
-    this.modules.push(module);
-    return true;
-  }
-
-	/**
-	 * 根据模块的识别码 , 返回模块集合中存储的模块
-	 * @param {Module} module 
-	 */
-  getModule(module) {
-    const identifier = module.identifier();
-    return this._modules[identifier];
-  }
-
-  findModule(identifier) {
-    return this._modules[identifier];
+    }, callback);
   }
 
   /**
+	 * 以依赖模块dependency为起点 , 生成依赖模块链
+	 * @param {String} context 依赖的上下文路径
+	 * @param {Dependency} dependency 依赖
+	 * @param {Function} onModule 当模块创建成功之后 , 触发的回调函数
+	 * @param {Function} callback 当模块链添加完毕之后触发
+	 */
+  _addModuleChain(context, dependency, onModule, callback) {
+    const start = this.profile && Date.now();
+
+    //
+    // 处理错误
+    // 
+    const errorAndCallback =
+      this.bail
+        ? function errorAndCallback(err) {
+          callback(err);
+        }
+        : function errorAndCallback(err) {
+          err.dependencies = [dependency];
+          this.errors.push(err);
+          callback();
+        }.bind(this);
+
+    if (typeof dependency !== "object" ||
+      dependency === null ||
+      !dependency.constructor) {
+      throw new Error("Parameter 'dependency' must be a Dependency");
+    }
+
+    const moduleFactory = this.dependencyFactories.get(dependency.constructor);
+
+    if (!moduleFactory) {
+      throw new Error(`No dependency factory available for this dependency type: ${dependency.constructor.name}`);
+    }
+
+    //
+    // 创建模块
+    //
+    moduleFactory.create(
+      {
+        contextInfo: { issuer: "", compiler: this.compiler.name },
+        context: context,
+        dependencies: [dependency]
+      },
+
+      /**
+       * 当模块创建完成时触发
+       * @param {Module} 模块
+       */
+      (err, module) => {
+        if (err) {
+          return errorAndCallback(new EntryModuleNotFoundError(err));
+        }
+
+        //
+        // 记录 创建模块耗时
+        //
+        let afterFactory;
+        if (this.profile) {
+          if (!module.profile) {
+            module.profile = {};
+          }
+          afterFactory = Date.now();
+          module.profile.factory = afterFactory - start;
+        }
+
+        const result = this.addModule(module);
+
+        //
+        // 处理旧模块 -- 编译过程中 , 已经出现过的模块
+        // onModule --> callback()
+        //
+        if (!result) {
+          module = this.getModule(module);
+
+          onModule(module);
+
+          if (this.profile) {
+            const afterBuilding = Date.now();
+            module.profile.building = afterBuilding - afterFactory;
+          }
+
+          return callback(null, module);
+        }
+
+        //
+        // 处理新的模块 -- 编译过程中 , 第一次出现的模块
+        // onModule() --> buildModule() --> callback()
+        //
+        if (result instanceof Module) {
+          if (this.profile) {
+            result.profile = module.profile;
+          }
+
+          module = result;
+
+          onModule(module);
+
+          moduleReady.call(this);
+
+          return;
+        }
+
+        onModule(module);
+
+        //
+        // 构建模块
+        //
+        this.buildModule(module, false, null, null, (err) => {
+          if (err) {
+            return errorAndCallback(err);
+          }
+
+          if (this.profile) {
+            const afterBuilding = Date.now();
+            module.profile.building = afterBuilding - afterFactory;
+          }
+
+          moduleReady.call(this);
+        });
+
+        function moduleReady() {
+          this.processModuleDependencies(module, err => {
+            if (err) {
+              return callback(err);
+            }
+
+            return callback(null, module);
+          });
+        }
+      });
+  }
+
+  /**
+   * 构建模块
    * 
-   * 
-   * @param {any} module 
-   * @param {any} optional 
-   * @param {any} origin 
-   * @param {any} dependencies 
-   * @param {any} thisCallback 
+   * @param {Module} module 
+   * @param {Boolean} optional 
+   * @param {} origin 
+   * @param {} dependencies 
+   * @param {Function} thisCallback 
    * 
    * @memberof Compilation
    */
   buildModule(module, optional, origin, dependencies, thisCallback) {
     this.applyPlugins1("build-module", module);
-    if (module.building) return module.building.push(thisCallback);
+
+    if (module.building) {
+      return module.building.push(thisCallback);
+    }
+
     const building = module.building = [thisCallback];
 
+    //
+    // 构造依赖链式是并发的
+    // 积压回调函数 , 等该模块构造完毕之后 , 再一并触发
+    //
     function callback(err) {
       module.building = undefined;
       building.forEach(cb => cb(err));
     }
-    module.build(this.options, this, this.resolvers.normal, this.inputFileSystem, (error) => {
-      const errors = module.errors;
-      for (let indexError = 0; indexError < errors.length; indexError++) {
-        const err = errors[indexError];
-        err.origin = origin;
-        err.dependencies = dependencies;
-        if (optional)
-          this.warnings.push(err);
-        else
-          this.errors.push(err);
-      }
 
-      const warnings = module.warnings;
-      for (let indexWarning = 0; indexWarning < warnings.length; indexWarning++) {
-        const war = warnings[indexWarning];
-        war.origin = origin;
-        war.dependencies = dependencies;
-        this.warnings.push(war);
-      }
-      module.dependencies.sort(Dependency.compare);
-      if (error) {
-        this.applyPlugins2("failed-module", module, error);
-        return callback(error);
-      }
-      this.applyPlugins1("succeed-module", module);
-      return callback();
-    });
+    module.build(
+      this.options,
+      this, this.resolvers.normal,
+      this.inputFileSystem,
+      (error) => {
+        const errors = module.errors;
+        for (let indexError = 0; indexError < errors.length; indexError++) {
+          const err = errors[indexError];
+          err.origin = origin;
+          err.dependencies = dependencies;
+          if (optional)
+            this.warnings.push(err);
+          else
+            this.errors.push(err);
+        }
+
+        const warnings = module.warnings;
+        for (let indexWarning = 0; indexWarning < warnings.length; indexWarning++) {
+          const war = warnings[indexWarning];
+          war.origin = origin;
+          war.dependencies = dependencies;
+          this.warnings.push(war);
+        }
+        module.dependencies.sort(Dependency.compare);
+        if (error) {
+          this.applyPlugins2("failed-module", module, error);
+          return callback(error);
+        }
+        this.applyPlugins1("succeed-module", module);
+        return callback();
+      });
   }
 
-	/**
-	 * 
-	 * @param {*} module 
+  /**
+	 * 处理模块依赖
+	 * @param {Module} module 
 	 * @param {*} callback 
 	 */
   processModuleDependencies(module, callback) {
@@ -461,169 +592,14 @@ class Compilation extends Tapable {
     });
   }
 
-	/**
-	 * 以依赖模块dependency为起点 , 生成依赖模块链
-	 * @param {String} context 上下文路径
-	 * @param {Dependency} dependency 依赖模块
-	 * @param {Function} onModule 当模块创建完毕之后触发
-	 * @param {Function} callback 当模块链添加完毕之后触发
-	 */
-  _addModuleChain(context, dependency, onModule, callback) {
-    const start = this.profile && Date.now();
-
-    const errorAndCallback =
-      this.bail
-        ? function errorAndCallback(err) {
-          callback(err);
-        }
-        : function errorAndCallback(err) {
-          err.dependencies = [dependency];
-          this.errors.push(err);
-          callback();
-        }.bind(this);
-
-    if (typeof dependency !== "object" ||
-      dependency === null ||
-      !dependency.constructor) {
-      throw new Error("Parameter 'dependency' must be a Dependency");
-    }
-
-    const moduleFactory = this.dependencyFactories.get(dependency.constructor);
-    if (!moduleFactory) {
-      throw new Error(`No dependency factory available for this dependency type: ${dependency.constructor.name}`);
-    }
-
-    moduleFactory.create({
-      contextInfo: {
-        issuer: "",
-        compiler: this.compiler.name
-      },
-      context: context,
-      dependencies: [dependency]
-    }, (err, module) => {
-      if (err) {
-        return errorAndCallback(new EntryModuleNotFoundError(err));
-      }
-
-      let afterFactory;
-
-      if (this.profile) {
-        if (!module.profile) {
-          module.profile = {};
-        }
-        afterFactory = Date.now();
-        module.profile.factory = afterFactory - start;
-      }
-
-      const result = this.addModule(module);
-      if (!result) {
-        module = this.getModule(module);
-
-        onModule(module);
-
-        if (this.profile) {
-          const afterBuilding = Date.now();
-          module.profile.building = afterBuilding - afterFactory;
-        }
-
-        return callback(null, module);
-      }
-
-      if (result instanceof Module) {
-        if (this.profile) {
-          result.profile = module.profile;
-        }
-
-        module = result;
-
-        onModule(module);
-
-        moduleReady.call(this);
-        return;
-      }
-
-      onModule(module);
-
-      this.buildModule(module, false, null, null, (err) => {
-        if (err) {
-          return errorAndCallback(err);
-        }
-
-        if (this.profile) {
-          const afterBuilding = Date.now();
-          module.profile.building = afterBuilding - afterFactory;
-        }
-
-        moduleReady.call(this);
-      });
-
-      function moduleReady() {
-        this.processModuleDependencies(module, err => {
-          if (err) {
-            return callback(err);
-          }
-
-          return callback(null, module);
-        });
-      }
-    });
-  }
-
-	/**
-	 * 添加入口
-	 * @param {String} context 上下文路径
-	 * @param {Dependency} entry 入口模块依赖
-	 * @param {String} name 入口的名称
-	 * @param {Function} callback 回调函数 
-	 */
-  addEntry(context, entry, name, callback) {
-    const slot = {
-      name: name,
-      module: null
-    };
-
-    // add 预加载块
-    this.preparedChunks.push(slot);
-
-    // 以entry为起点 , 将引用到的所有模块
-    this._addModuleChain(
-      context,
-      entry,
-      (module) => {
-        entry.module = module;
-        this.entries.push(module);
-        module.issuer = null;
-      },
-      (err, module) => {
-        if (err) {
-          return callback(err);
-        }
-
-        if (module) {
-          slot.module = module;
-        } else {
-          const idx = this.preparedChunks.indexOf(slot);
-          this.preparedChunks.splice(idx, 1);
-        }
-        return callback(null, module);
-      });
-  }
-
-	/**
-	 * 
-	 * @param {String} context 
-	 * @param {Dependency} dependency 
-	 * @param {Function} callback 
-	 */
-  prefetch(context, dependency, callback) {
-    this._addModuleChain(context, dependency, module => {
-
-      module.prefetched = true;
-      module.issuer = null;
-
-    }, callback);
-  }
-
+  /**
+   * 
+   * 
+   * @param {any} module 
+   * @param {any} thisCallback 
+   * @returns 
+   * @memberof Compilation
+   */
   rebuildModule(module, thisCallback) {
     if (module.variables.length || module.blocks.length)
       throw new Error("Cannot rebuild a complex module with variables or blocks");
@@ -658,6 +634,115 @@ class Compilation extends Tapable {
 
     });
   }
+
+  /**
+   * 
+   * 
+   * @returns 
+   * 
+   * @memberof Compilation
+   */
+  getStats() {
+    return new Stats(this);
+  }
+
+  /**
+   * 
+   * 
+   * @param {any} name 
+   * @param {any} fn 
+   * @memberof Compilation
+   */
+  templatesPlugin(name, fn) {
+    this.mainTemplate.plugin(name, fn);
+    this.chunkTemplate.plugin(name, fn);
+  }
+
+	/**
+	 * 将module添加到编译实例的模块列表中
+	 * @param {Module} module 模块
+	 * @param {String} cacheGroup 缓存组名
+	 * @returns {Boolean} true=新增成功 , false=读取缓存
+	 */
+  addModule(module, cacheGroup) {
+    const identifier = module.identifier();
+
+    if (this._modules[identifier]) {
+      return false;
+    }
+
+    //
+    // 缓存 && add
+    //
+    const cacheName = (cacheGroup || "m") + identifier;
+
+    //
+    // 读取缓存
+    //
+    if (this.cache && this.cache[cacheName]) {
+      const cacheModule = this.cache[cacheName];
+
+      let rebuild = true;
+
+      if (!cacheModule.error &&
+        cacheModule.cacheable &&
+        this.fileTimestamps &&
+        this.contextTimestamps) {
+        rebuild = cacheModule.needRebuild(this.fileTimestamps, this.contextTimestamps);
+      }
+
+      if (!rebuild) {
+        cacheModule.disconnect();
+
+        this._modules[identifier] = cacheModule;
+        this.modules.push(cacheModule);
+
+        cacheModule.errors.forEach(err => this.errors.push(err), this);
+        cacheModule.warnings.forEach(err => this.warnings.push(err), this);
+
+        return cacheModule;
+      } else {
+        module.lastId = cacheModule.id;
+      }
+    }
+
+    // 撤销构建 -- 销毁构建相关的所有信息
+    module.unbuild();
+
+    this._modules[identifier] = module;
+
+    if (this.cache) {
+      this.cache[cacheName] = module;
+    }
+
+    this.modules.push(module);
+
+    return true;
+  }
+
+	/**
+	 * 获得编译过程中 , 已经出现类的同名模块的实例
+	 * @param {Module} module 模块实例 
+   * @returns {Module} 模块实例
+	 */
+  getModule(module) {
+    const identifier = module.identifier();
+
+    return this._modules[identifier];
+  }
+
+  /**
+   * 
+   * 
+   * @param {any} identifier 
+   * @returns 
+   * @memberof Compilation
+   */
+  findModule(identifier) {
+    return this._modules[identifier];
+  }
+
+
 
   /**
    * 编译完成 -- 发出事件 , 记录错误和警告信息

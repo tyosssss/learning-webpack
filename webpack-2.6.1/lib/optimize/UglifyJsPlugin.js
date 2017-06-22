@@ -32,6 +32,7 @@ class UglifyJsPlugin {
 					module.useSourceMap = true;
 				});
 			}
+      
 			compilation.plugin("optimize-chunk-assets", (chunks, callback) => {
 				const files = [];
 				chunks.forEach((chunk) => files.push.apply(files, chunk.files));

@@ -30,7 +30,24 @@ module.exports = {
   module: {
     rules: [
       {
-        loader:'css-loader'
+        enforce: 'pre',
+        loader: '../../test-loader',
+        options: {
+          type: '---pre---',
+        }
+      },
+      {
+        loader: '../../test-loader',
+        options: {
+          type: '---normal---',
+        }
+      },
+      {
+        enforce: 'post',
+        loader: '../../test-loader',
+        options: {
+          type: '---post---',
+        }
       }
     ]
   },

@@ -101,6 +101,10 @@ class DependenciesBlock {
 		return this.blocks.concat(this.variables).some(item => item.hasDependencies(filter));
 	}
 
+  /**
+   * 
+   * @memberof DependenciesBlock
+   */
 	sortItems() {
 		this.blocks.forEach(block => block.sortItems());
 	}

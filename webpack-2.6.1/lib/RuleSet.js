@@ -79,15 +79,15 @@ normalized:
  */
 
 module.exports = class RuleSet {
-	constructor(rules) {
+  constructor(rules) {
 		/**
 		 * 加载器的ident与选项之间的关系
 		 * @type {Map<ident:String , UseOptions:Object>}
 		 */
-		this.references = Object.create(null);
+    this.references = Object.create(null);
 
-		this.rules = RuleSet.normalizeRules(rules, this.references, "ref-");
-	}
+    this.rules = RuleSet.normalizeRules(rules, this.references, "ref-");
+  }
 
 	/**
 	 * 
@@ -95,17 +95,17 @@ module.exports = class RuleSet {
 	 * @param {Map<>} refs 引用集合
 	 * @param {String} ident 标识符
 	 */
-	static normalizeRules(rules, refs, ident) {
-		if (Array.isArray(rules)) {
-			return rules.map((rule, idx) => {
-				return RuleSet.normalizeRule(rule, refs, `${ident}-${idx}`);
-			});
-		} else if (rules) {
-			return [RuleSet.normalizeRule(rules, refs, ident)];
-		} else {
-			return [];
-		}
-	}
+  static normalizeRules(rules, refs, ident) {
+    if (Array.isArray(rules)) {
+      return rules.map((rule, idx) => {
+        return RuleSet.normalizeRule(rule, refs, `${ident}-${idx}`);
+      });
+    } else if (rules) {
+      return [RuleSet.normalizeRule(rules, refs, ident)];
+    } else {
+      return [];
+    }
+  }
 
 	/**
 	 * 格式化规则
@@ -113,146 +113,146 @@ module.exports = class RuleSet {
 	 * @param {Map<>} refs 
 	 * @param {String} ident 
 	 */
-	static normalizeRule(rule, refs, ident) {
-		if (typeof rule === "string") {
-			return { use: [{ loader: rule }] };
-		}
+  static normalizeRule(rule, refs, ident) {
+    if (typeof rule === "string") {
+      return { use: [{ loader: rule }] };
+    }
 
-		if (!rule)
-			throw new Error("Unexcepted null when object was expected as rule");
+    if (!rule)
+      throw new Error("Unexcepted null when object was expected as rule");
 
-		if (typeof rule !== "object")
-			throw new Error("Unexcepted " + typeof rule + " when object was expected as rule (" + rule + ")");
+    if (typeof rule !== "object")
+      throw new Error("Unexcepted " + typeof rule + " when object was expected as rule (" + rule + ")");
 
-		let newRule = {};
-		let useSource;
-		let resourceSource;
-		let condition;
+    let newRule = {};
+    let useSource;
+    let resourceSource;
+    let condition;
 
-		//
-		// test | include | exclude
-		//
-		if (rule.test || rule.include || rule.exclude) {
-			checkResourceSource("test + include + exclude");
+    //
+    // test | include | exclude
+    //
+    if (rule.test || rule.include || rule.exclude) {
+      checkResourceSource("test + include + exclude");
 
-			condition = {
-				test: rule.test,
-				include: rule.include,
-				exclude: rule.exclude
-			};
+      condition = {
+        test: rule.test,
+        include: rule.include,
+        exclude: rule.exclude
+      };
 
-			try {
-				newRule.resource = RuleSet.normalizeCondition(condition);
-			} catch (error) {
-				throw new Error(RuleSet.buildErrorMessage(condition, error));
-			}
-		}
+      try {
+        newRule.resource = RuleSet.normalizeCondition(condition);
+      } catch (error) {
+        throw new Error(RuleSet.buildErrorMessage(condition, error));
+      }
+    }
 
-		if (rule.resource) {
-			checkResourceSource("resource");
+    if (rule.resource) {
+      checkResourceSource("resource");
 
-			try {
-				newRule.resource = RuleSet.normalizeCondition(rule.resource);
-			} catch (error) {
-				throw new Error(RuleSet.buildErrorMessage(rule.resource, error));
-			}
-		}
+      try {
+        newRule.resource = RuleSet.normalizeCondition(rule.resource);
+      } catch (error) {
+        throw new Error(RuleSet.buildErrorMessage(rule.resource, error));
+      }
+    }
 
-		if (rule.resourceQuery) {
-			try {
-				newRule.resourceQuery = RuleSet.normalizeCondition(rule.resourceQuery);
-			} catch (error) {
-				throw new Error(RuleSet.buildErrorMessage(rule.resourceQuery, error));
-			}
-		}
+    if (rule.resourceQuery) {
+      try {
+        newRule.resourceQuery = RuleSet.normalizeCondition(rule.resourceQuery);
+      } catch (error) {
+        throw new Error(RuleSet.buildErrorMessage(rule.resourceQuery, error));
+      }
+    }
 
-		if (rule.compiler) {
-			try {
-				newRule.compiler = RuleSet.normalizeCondition(rule.compiler);
-			} catch (error) {
-				throw new Error(RuleSet.buildErrorMessage(rule.compiler, error));
-			}
-		}
+    if (rule.compiler) {
+      try {
+        newRule.compiler = RuleSet.normalizeCondition(rule.compiler);
+      } catch (error) {
+        throw new Error(RuleSet.buildErrorMessage(rule.compiler, error));
+      }
+    }
 
-		if (rule.issuer) {
-			try {
-				newRule.issuer = RuleSet.normalizeCondition(rule.issuer);
-			} catch (error) {
-				throw new Error(RuleSet.buildErrorMessage(rule.issuer, error));
-			}
-		}
+    if (rule.issuer) {
+      try {
+        newRule.issuer = RuleSet.normalizeCondition(rule.issuer);
+      } catch (error) {
+        throw new Error(RuleSet.buildErrorMessage(rule.issuer, error));
+      }
+    }
 
-		//
-		// 加载器相关的规则
-		//
-		if (rule.loader && rule.loaders)
-			throw new Error(RuleSet.buildErrorMessage(rule, new Error("Provided loader and loaders for rule (use only one of them)")));
+    //
+    // 加载器相关的规则
+    //
+    if (rule.loader && rule.loaders)
+      throw new Error(RuleSet.buildErrorMessage(rule, new Error("Provided loader and loaders for rule (use only one of them)")));
 
-		const loader = rule.loaders || rule.loader;
+    const loader = rule.loaders || rule.loader;
 
-		if (typeof loader === "string" && !rule.options && !rule.query) {
-			checkUseSource("loader");
-			newRule.use = RuleSet.normalizeUse(loader.split("!"), ident);
-		} else if (typeof loader === "string" && (rule.options || rule.query)) {
-			checkUseSource("loader + options/query");
-			newRule.use = RuleSet.normalizeUse({
-				loader: loader,
-				options: rule.options,
-				query: rule.query
-			}, ident);
-		} else if (loader && (rule.options || rule.query)) {
-			throw new Error(RuleSet.buildErrorMessage(rule, new Error("options/query cannot be used with loaders (use options for each array item)")));
-		} else if (loader) {
-			checkUseSource("loaders");
-			newRule.use = RuleSet.normalizeUse(loader, ident);
-		} else if (rule.options || rule.query) {
-			throw new Error(RuleSet.buildErrorMessage(rule, new Error("options/query provided without loader (use loader + options)")));
-		}
+    if (typeof loader === "string" && !rule.options && !rule.query) {
+      checkUseSource("loader");
+      newRule.use = RuleSet.normalizeUse(loader.split("!"), ident);
+    } else if (typeof loader === "string" && (rule.options || rule.query)) {
+      checkUseSource("loader + options/query");
+      newRule.use = RuleSet.normalizeUse({
+        loader: loader,
+        options: rule.options,
+        query: rule.query
+      }, ident);
+    } else if (loader && (rule.options || rule.query)) {
+      throw new Error(RuleSet.buildErrorMessage(rule, new Error("options/query cannot be used with loaders (use options for each array item)")));
+    } else if (loader) {
+      checkUseSource("loaders");
+      newRule.use = RuleSet.normalizeUse(loader, ident);
+    } else if (rule.options || rule.query) {
+      throw new Error(RuleSet.buildErrorMessage(rule, new Error("options/query provided without loader (use loader + options)")));
+    }
 
-		if (rule.use) {
-			checkUseSource("use");
-			newRule.use = RuleSet.normalizeUse(rule.use, ident);
-		}
+    if (rule.use) {
+      checkUseSource("use");
+      newRule.use = RuleSet.normalizeUse(rule.use, ident);
+    }
 
-		if (rule.rules)
-			newRule.rules = RuleSet.normalizeRules(rule.rules, refs, `${ident}-rules`);
+    if (rule.rules)
+      newRule.rules = RuleSet.normalizeRules(rule.rules, refs, `${ident}-rules`);
 
-		if (rule.oneOf)
-			newRule.oneOf = RuleSet.normalizeRules(rule.oneOf, refs, `${ident}-oneOf`);
+    if (rule.oneOf)
+      newRule.oneOf = RuleSet.normalizeRules(rule.oneOf, refs, `${ident}-oneOf`);
 
-		const keys = Object
-			.keys(rule)
-			.filter((key) => {
-				return ["resource", "resourceQuery", "compiler", "test", "include", "exclude", "issuer", "loader", "options", "query", "loaders", "use", "rules", "oneOf"].indexOf(key) < 0;
-			});
+    const keys = Object
+      .keys(rule)
+      .filter((key) => {
+        return ["resource", "resourceQuery", "compiler", "test", "include", "exclude", "issuer", "loader", "options", "query", "loaders", "use", "rules", "oneOf"].indexOf(key) < 0;
+      });
 
-		keys.forEach((key) => {
-			newRule[key] = rule[key];
-		});
+    keys.forEach((key) => {
+      newRule[key] = rule[key];
+    });
 
-		function checkUseSource(newSource) {
-			if (useSource && useSource !== newSource)
-				throw new Error(RuleSet.buildErrorMessage(rule, new Error("Rule can only have one result source (provided " + newSource + " and " + useSource + ")")));
-			useSource = newSource;
-		}
+    function checkUseSource(newSource) {
+      if (useSource && useSource !== newSource)
+        throw new Error(RuleSet.buildErrorMessage(rule, new Error("Rule can only have one result source (provided " + newSource + " and " + useSource + ")")));
+      useSource = newSource;
+    }
 
-		function checkResourceSource(newSource) {
-			if (resourceSource && resourceSource !== newSource)
-				throw new Error(RuleSet.buildErrorMessage(rule, new Error("Rule can only have one resource source (provided " + newSource + " and " + resourceSource + ")")));
+    function checkResourceSource(newSource) {
+      if (resourceSource && resourceSource !== newSource)
+        throw new Error(RuleSet.buildErrorMessage(rule, new Error("Rule can only have one resource source (provided " + newSource + " and " + resourceSource + ")")));
 
-			resourceSource = newSource;
-		}
+      resourceSource = newSource;
+    }
 
-		if (Array.isArray(newRule.use)) {
-			newRule.use.forEach((item) => {
-				if (item.ident) {
-					refs[item.ident] = item.options;
-				}
-			});
-		}
+    if (Array.isArray(newRule.use)) {
+      newRule.use.forEach((item) => {
+        if (item.ident) {
+          refs[item.ident] = item.options;
+        }
+      });
+    }
 
-		return newRule;
-	}
+    return newRule;
+  }
 
 
 
@@ -262,15 +262,15 @@ module.exports = class RuleSet {
 	 * @param {String} ident 指示符
 	 * @returns {Array}
 	 */
-	static normalizeUse(use, ident) {
-		if (Array.isArray(use)) {
-			return use
-				.map((item, idx) => RuleSet.normalizeUse(item, `${ident}-${idx}`))
-				.reduce((arr, items) => arr.concat(items), []);
-		}
+  static normalizeUse(use, ident) {
+    if (Array.isArray(use)) {
+      return use
+        .map((item, idx) => RuleSet.normalizeUse(item, `${ident}-${idx}`))
+        .reduce((arr, items) => arr.concat(items), []);
+    }
 
-		return [RuleSet.normalizeUseItem(use, ident)];
-	}
+    return [RuleSet.normalizeUseItem(use, ident)];
+  }
 
 	/**
 	 * 标准化use项
@@ -278,74 +278,75 @@ module.exports = class RuleSet {
 	 * @param {String} ident 指示符
 	 * @retuns {Function | Object}
 	 */
-	static normalizeUseItem(item, ident) {
-		if (typeof item === "function")
-			return item;
+  static normalizeUseItem(item, ident) {
+    if (typeof item === "function") {
+      return item;
+    }
 
-		if (typeof item === "string") {
-			return RuleSet.normalizeUseItemString(item);
-		}
+    if (typeof item === "string") {
+      return RuleSet.normalizeUseItemString(item);
+    }
 
-		let newItem = {};
+    let newItem = {};
 
-		if (item.options && item.query)
-			throw new Error("Provided options and query in use");
+    if (item.options && item.query)
+      throw new Error("Provided options and query in use");
 
-		if (!item.loader)
-			throw new Error("No loader specified");
+    if (!item.loader)
+      throw new Error("No loader specified");
 
-		newItem.options = item.options || item.query;
+    newItem.options = item.options || item.query;
 
-		if (typeof newItem.options === "object" && newItem.options) {
-			if (newItem.options.ident)
-				newItem.ident = newItem.options.ident;
-			else
-				newItem.ident = ident;
-		}
+    if (typeof newItem.options === "object" && newItem.options) {
+      if (newItem.options.ident)
+        newItem.ident = newItem.options.ident;
+      else
+        newItem.ident = ident;
+    }
 
-		const keys = Object.keys(item).filter(function (key) {
-			return ["options", "query"].indexOf(key) < 0;
-		});
+    const keys = Object.keys(item).filter(function (key) {
+      return ["options", "query"].indexOf(key) < 0;
+    });
 
-		keys.forEach(function (key) {
-			newItem[key] = item[key];
-		});
+    keys.forEach(function (key) {
+      newItem[key] = item[key];
+    });
 
-		return newItem;
-	}
+    return newItem;
+  }
 
 	/**
 	 * 标准化函数形式的use项
 	 * @param {Function} use 
 	 * @param {Any} data 
 	 */
-	static normalizeUseItemFunction(use, data) {
-		const result = use(data);
-		if (typeof result === "string") {
-			return RuleSet.normalizeUseItem(result);
-		}
-		return result;
-	}
+  static normalizeUseItemFunction(use, data) {
+    const result = use(data);
+    if (typeof result === "string") {
+      return RuleSet.normalizeUseItem(result);
+    }
+    return result;
+  }
 
 	/**
 	 * 标准化字符形式的use项
 	 * @param {String} useItemString 
 	 * @returns {loader : String , options : String}
 	 */
-	static normalizeUseItemString(useItemString) {
-		const idx = useItemString.indexOf("?");
+  static normalizeUseItemString(useItemString) {
+    const idx = useItemString.indexOf("?");
 
-		if (idx >= 0) {
-			return {
-				loader: useItemString.substr(0, idx),
-				options: useItemString.substr(idx + 1)
-			};
-		}
+    if (idx >= 0) {
+      return {
+        loader: useItemString.substr(0, idx),
+        options: useItemString.substr(idx + 1)
+      };
+    }
 
-		return {
-			loader: useItemString
-		};
-	}
+    return {
+      loader: useItemString
+    };
+  }
 
 
 
@@ -354,68 +355,68 @@ module.exports = class RuleSet {
 	 * @param {String | Function | RegExp | Condition[] | Object} condition 
 	 * @returns {Function} 返回标准化的规则条件
 	 */
-	static normalizeCondition(condition) {
-		if (!condition)
-			throw new Error("Expected condition but got falsy value");
+  static normalizeCondition(condition) {
+    if (!condition)
+      throw new Error("Expected condition but got falsy value");
 
-		if (typeof condition === "string") {
-			return str => str.indexOf(condition) === 0;
-		}
+    if (typeof condition === "string") {
+      return str => str.indexOf(condition) === 0;
+    }
 
-		if (typeof condition === "function") {
-			return condition;
-		}
+    if (typeof condition === "function") {
+      return condition;
+    }
 
-		if (condition instanceof RegExp) {
-			return condition.test.bind(condition);
-		}
+    if (condition instanceof RegExp) {
+      return condition.test.bind(condition);
+    }
 
-		if (Array.isArray(condition)) {
-			const items = condition.map(c => RuleSet.normalizeCondition(c));
+    if (Array.isArray(condition)) {
+      const items = condition.map(c => RuleSet.normalizeCondition(c));
 
-			return orMatcher(items);
-		}
+      return orMatcher(items);
+    }
 
-		if (typeof condition !== "object")
-			throw Error("Unexcepted " + typeof condition + " when condition was expected (" + condition + ")");
+    if (typeof condition !== "object")
+      throw Error("Unexcepted " + typeof condition + " when condition was expected (" + condition + ")");
 
-		let matchers = [];
-		Object.keys(condition).forEach(key => {
-			const value = condition[key];
+    let matchers = [];
+    Object.keys(condition).forEach(key => {
+      const value = condition[key];
 
-			switch (key) {
-				case "or":
-				case "include":
-				case "test":
-					if (value)
-						matchers.push(RuleSet.normalizeCondition(value));
-					break;
-				case "and":
-					if (value) {
-						const items = value.map(c => RuleSet.normalizeCondition(c));
-						matchers.push(andMatcher(items));
-					}
-					break;
-				case "not":
-				case "exclude":
-					if (value) {
-						const matcher = RuleSet.normalizeCondition(value);
-						matchers.push(notMatcher(matcher));
-					}
-					break;
-				default:
-					throw new Error("Unexcepted property " + key + " in condition");
-			}
-		});
+      switch (key) {
+        case "or":
+        case "include":
+        case "test":
+          if (value)
+            matchers.push(RuleSet.normalizeCondition(value));
+          break;
+        case "and":
+          if (value) {
+            const items = value.map(c => RuleSet.normalizeCondition(c));
+            matchers.push(andMatcher(items));
+          }
+          break;
+        case "not":
+        case "exclude":
+          if (value) {
+            const matcher = RuleSet.normalizeCondition(value);
+            matchers.push(notMatcher(matcher));
+          }
+          break;
+        default:
+          throw new Error("Unexcepted property " + key + " in condition");
+      }
+    });
 
-		if (matchers.length === 0)
-			throw new Error("Excepted condition but got " + condition);
+    if (matchers.length === 0)
+      throw new Error("Excepted condition but got " + condition);
 
-		if (matchers.length === 1)
-			return matchers[0];
+    if (matchers.length === 1)
+      return matchers[0];
 
-		return andMatcher(matchers);
-	}
+    return andMatcher(matchers);
+  }
 
 
 	/**
@@ -423,106 +424,131 @@ module.exports = class RuleSet {
 	 * @param {Any} condition 
 	 * @param {String} error 错误信息
 	 */
-	static buildErrorMessage(condition, error) {
-		const conditionAsText = JSON.stringify(
-			condition,
-			(key, value) => {
-				return value === undefined ? "undefined" : value;
-			},
-			2
-		);
+  static buildErrorMessage(condition, error) {
+    const conditionAsText = JSON.stringify(
+      condition,
+      (key, value) => {
+        return value === undefined ? "undefined" : value;
+      },
+      2
+    );
 
-		return error.message + " in " + conditionAsText;
-	}
+    return error.message + " in " + conditionAsText;
+  }
 
 
-
-	/**
-	 * 
-	 * @param {*} data 
-	 */
-	exec(data) {
-		const result = [];
-		this._run(data, {
-			rules: this.rules
-		}, result);
-		return result;
-	}
 
 	/**
 	 * 
-	 * @param {*} data 
-	 * @param {*} rule 
-	 * @param {*} result 
+	 * @param {Object} data 
+   * @returns {Array[]}
 	 */
-	_run(data, rule, result) {
-		// test conditions
-		if (rule.resource && !data.resource)
-			return false;
-		if (rule.resourceQuery && !data.resourceQuery)
-			return false;
-		if (rule.compiler && !data.compiler)
-			return false;
-		if (rule.issuer && !data.issuer)
-			return false;
-		if (rule.resource && !rule.resource(data.resource))
-			return false;
-		if (data.issuer && rule.issuer && !rule.issuer(data.issuer))
-			return false;
-		if (data.resourceQuery && rule.resourceQuery && !rule.resourceQuery(data.resourceQuery))
-			return false;
-		if (data.compiler && rule.compiler && !rule.compiler(data.compiler))
-			return false;
+  exec(data) {
+    const result = [];
 
-		// apply
-		const keys = Object.keys(rule).filter((key) => {
-			return ["resource", "resourceQuery", "compiler", "issuer", "rules", "oneOf", "use", "enforce"].indexOf(key) < 0;
-		});
-		keys.forEach((key) => {
-			result.push({
-				type: key,
-				value: rule[key]
-			});
-		});
+    this._run(data, { rules: this.rules }, result);
 
-		if (rule.use) {
-			rule.use.forEach((use) => {
-				result.push({
-					type: "use",
-					value: typeof use === "function"
-						? RuleSet.normalizeUseItemFunction(use, data)
-						: use,
-					enforce: rule.enforce
-				});
-			});
-		}
+    return result;
+  }
 
-		if (rule.rules) {
-			for (let i = 0; i < rule.rules.length; i++) {
-				this._run(data, rule.rules[i], result);
-			}
-		}
+	/**
+	 * 执行
+	 * @param {Object} data 数据
+	 * @param {Rule[]} rule 规则集合
+	 * @param {{type , value}[]} result 
+   * @returns {Boolean} true = 表示规则应用成功; false = 表示规则应用失败
+	 */
+  _run(data, rule, result) {
+    // test conditions
+    if (rule.resource && !data.resource)
+      return false;
+    
+    if (rule.resourceQuery && !data.resourceQuery)
+      return false;
+    
+    if (rule.compiler && !data.compiler)
+      return false;
+    
+    if (rule.issuer && !data.issuer)
+      return false;
+    
+    if (rule.resource && !rule.resource(data.resource))
+      return false;
+    
+    if (data.issuer && rule.issuer && !rule.issuer(data.issuer))
+      return false;
+    
+    if (data.resourceQuery && rule.resourceQuery && !rule.resourceQuery(data.resourceQuery))
+      return false;
+    
+    if (data.compiler && rule.compiler && !rule.compiler(data.compiler))
+      return false;
 
-		if (rule.oneOf) {
-			for (let i = 0; i < rule.oneOf.length; i++) {
-				if (this._run(data, rule.oneOf[i], result))
-					break;
-			}
-		}
+    // apply
+    const keys = Object
+      .keys(rule)
+      .filter((key) =>
+        [
+          "resource",
+          "resourceQuery",
+          "compiler",
+          "issuer",
+          "rules",
+          "oneOf",
+          "use",
+          "enforce"
+        ].indexOf(key) < 0
+      );
 
-		return true;
-	}
+    keys.forEach((key) => {
+      result.push({
+        type: key,
+        value: rule[key]
+      });
+    });
+
+    if (rule.use) {
+      rule.use.forEach((use) => {
+        result.push({
+          type: "use",
+          value: typeof use === "function"
+            ? RuleSet.normalizeUseItemFunction(use, data)
+            : use,
+          enforce: rule.enforce
+        });
+      });
+    }
+
+    if (rule.rules) {
+      for (let i = 0; i < rule.rules.length; i++) {
+        this._run(data, rule.rules[i], result);
+      }
+    }
+
+    if (rule.oneOf) {
+      for (let i = 0; i < rule.oneOf.length; i++) {
+        if (this._run(data, rule.oneOf[i], result))
+          break;
+      }
+    }
+
+    return true;
+  }
 
 	/**
 	 * 获得指定标志符的选项
 	 * @param {String} ident 标志符
 	 * @returns {String}
 	 */
-	findOptionsByIdent(ident) {
-		const options = this.references[ident];
-		if (!options) throw new Error("Can't find options with ident '" + ident + "'");
-		return options;
-	}
+  findOptionsByIdent(ident) {
+    const options = this.references[ident];
+
+    if (!options) {
+      throw new Error("Can't find options with ident '" + ident + "'");
+    }
+
+    return options;
+  }
 };
 
 /**
@@ -531,9 +557,9 @@ module.exports = class RuleSet {
  * @returns {Function} args=>Boolean
  */
 function notMatcher(matcher) {
-	return function (str) {
-		return !matcher(str);
-	};
+  return function (str) {
+    return !matcher(str);
+  };
 }
 
 /**
@@ -542,13 +568,13 @@ function notMatcher(matcher) {
  * @returns {Function} args=>Boolean
  */
 function orMatcher(items) {
-	return function (str) {
-		for (let i = 0; i < items.length; i++) {
-			if (items[i](str))
-				return true;
-		}
-		return false;
-	};
+  return function (str) {
+    for (let i = 0; i < items.length; i++) {
+      if (items[i](str))
+        return true;
+    }
+    return false;
+  };
 }
 
 /**
@@ -557,11 +583,11 @@ function orMatcher(items) {
  * @returns {Function} args=>Boolean
  */
 function andMatcher(items) {
-	return function (str) {
-		for (let i = 0; i < items.length; i++) {
-			if (!items[i](str))
-				return false;
-		}
-		return true;
-	};
+  return function (str) {
+    for (let i = 0; i < items.length; i++) {
+      if (!items[i](str))
+        return false;
+    }
+    return true;
+  };
 }
