@@ -44,6 +44,10 @@ function copyProperties(from, to) {
   return to;
 }
 
+function rest(arrayLike, n) {
+  return Array.prototype.slice.call(arrayLike, n)
+}
+
 /**
  * Tapable
  * 基于"事件发布/订阅"的插件架构
@@ -83,13 +87,11 @@ Tapable.mixin = function mixinTapable(pt) {
  * @param {...Any} args 调用事件处理函数的参数
  */
 Tapable.prototype.applyPlugins = function applyPlugins(name) {
-  if (!this._plugins[name]) return;
-
-  var args = Array.prototype.slice.call(arguments, 1);
-  var plugins = this._plugins[name];
-
-  for (var i = 0; i < plugins.length; i++)
-    plugins[i].apply(this, args);
+  _applyPlugins(
+    name,
+    this,
+    rest(arguments, 1)
+  )
 };
 
 /**
@@ -100,10 +102,7 @@ Tapable.prototype.applyPlugins = function applyPlugins(name) {
  * @param {String} name 事件名称
  */
 Tapable.prototype.applyPlugins0 = function applyPlugins0(name) {
-  var plugins = this._plugins[name];
-  if (!plugins) return;
-  for (var i = 0; i < plugins.length; i++)
-    plugins[i].call(this);
+  _applyPlugins(name, this)
 };
 
 /**
@@ -115,10 +114,7 @@ Tapable.prototype.applyPlugins0 = function applyPlugins0(name) {
  * @param {Any} param 调用事件处理函数的参数
  */
 Tapable.prototype.applyPlugins1 = function applyPlugins1(name, param) {
-  var plugins = this._plugins[name];
-  if (!plugins) return;
-  for (var i = 0; i < plugins.length; i++)
-    plugins[i].call(this, param);
+  _applyPlugins(name, this, param)
 };
 
 /**
@@ -131,11 +127,20 @@ Tapable.prototype.applyPlugins1 = function applyPlugins1(name, param) {
  * @param {Any} param2 调用事件处理函数的参数2
  */
 Tapable.prototype.applyPlugins2 = function applyPlugins2(name, param1, param2) {
-  var plugins = this._plugins[name];
-  if (!plugins) return;
-  for (var i = 0; i < plugins.length; i++)
-    plugins[i].call(this, param1, param2);
+  _applyPlugins(name, this, [param1, param2])
 };
+
+function _applyPlugins(name, context, args) {
+  var plugins = context._plugins[name]
+
+  if (!plugins) {
+    return;
+  }
+
+  plugins.forEach(p => p.apply(context, [args]))
+}
+
+
 
 /**
  * 发布事件 - 按waterfall方式依次执行事件处理函数
@@ -148,16 +153,12 @@ Tapable.prototype.applyPlugins2 = function applyPlugins2(name, param1, param2) {
  * @param {Any} 返回计算出的最终值
  */
 Tapable.prototype.applyPluginsWaterfall = function applyPluginsWaterfall(name, init) {
-  if (!this._plugins[name]) return init;
-
-  var args = Array.prototype.slice.call(arguments, 2);
-  var plugins = this._plugins[name];
-  var current = init;
-
-  for (var i = 0; i < plugins.length; i++)
-    current = plugins[i].apply(this, [current].concat(args));
-
-  return current;
+  return _applyPluginsWaterfall(
+    name,
+    this,
+    init,
+    rest(arguments, 2)
+  )
 };
 
 /**
@@ -170,13 +171,21 @@ Tapable.prototype.applyPluginsWaterfall = function applyPluginsWaterfall(name, i
  * @param {Any} 返回计算出的最终值
  */
 Tapable.prototype.applyPluginsWaterfall0 = function applyPluginsWaterfall0(name, init) {
-  var plugins = this._plugins[name];
-  if (!plugins) return init;
-  var current = init;
-  for (var i = 0; i < plugins.length; i++)
-    current = plugins[i].call(this, current);
-  return current;
+  return _applyPluginsWaterfall(name, this, init)
 };
+
+function _applyPluginsWaterfall(name, context, init, args) {
+  let plugins = context._plugins[name]
+
+  if (!plugins) {
+    return;
+  }
+
+  return plugins.reduce(
+    (current, p) => p.apply(context, [current].concat(args)),
+    init
+  )
+}
 
 /**
  * 发布事件 - 依次执行事件处理函数.
@@ -200,6 +209,7 @@ Tapable.prototype.applyPluginsBailResult = function applyPluginsBailResult(name)
     }
   }
 };
+
 
 /**
  * 发布事件 - 依次执行事件处理函数.
@@ -338,6 +348,8 @@ Tapable.prototype.applyPluginsAsyncSeriesBailResult1 = function applyPluginsAsyn
   plugins[0].call(this, param, innerCallback);
 };
 
+
+
 /**
  * 发布事件 - 以一步方式 , 按waterfall方式依次执行事件处理函数
  * 
@@ -369,6 +381,8 @@ Tapable.prototype.applyPluginsAsyncWaterfall = function applyPluginsAsyncWaterfa
 
   plugins[0].call(this, init, next);
 };
+
+
 
 /**
  * 发布事件 - 以异步方式 , 并行执行所有的事件处理函数 , 当所有事件执行函数或某个事件执行错误时调用callback,结束执行
@@ -415,7 +429,11 @@ Tapable.prototype.applyPluginsParallel = function applyPluginsParallel(name) {
 Tapable.prototype.applyPluginsParallelBailResult = function applyPluginsParallelBailResult(name) {
   var args = Array.prototype.slice.call(arguments, 1);
   var callback = args[args.length - 1];
-  if (!this._plugins[name] || this._plugins[name].length === 0) return callback();
+
+  if (!this._plugins[name] || this._plugins[name].length === 0) {
+    return callback();
+  }
+
   var plugins = this._plugins[name];
 
   // 记录有参数返回的fn在队列中的位置 
@@ -430,11 +448,17 @@ Tapable.prototype.applyPluginsParallelBailResult = function applyPluginsParallel
   for (var i = 0; i < plugins.length; i++) {
     args[args.length - 1] = (function (i) {
       return copyProperties(callback, function () {
+        //
+        // 处理回调函数
+        //
+        // console.log(currentPos)
 
         // 
         // 如果当前完成的fn在currentPos之后注册 , 那么它就没有资格触发callback
         //
-        if (i >= currentPos) return; // ignore
+        if (i >= currentPos) {
+          return; // ignore
+        }
 
         // 添加到完成列表
         done.push(i);
