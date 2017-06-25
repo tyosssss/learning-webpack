@@ -6,6 +6,9 @@
 
 const ConstDependency = require("./dependencies/ConstDependency");
 
+/**
+ * 处理 use strict -- 针对代码首行有了'use strict'的 , 做相关处理
+ */
 class UseStrictPlugin {
 	apply(compiler) {
 		compiler.plugin("compilation", (compilation, params) => {

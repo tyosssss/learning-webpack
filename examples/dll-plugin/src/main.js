@@ -9,7 +9,19 @@
 
 // loader
 // let xx = (
-  require('ccc/crocodile/vendor.js')
+let vendor = require('ccc/crocodile/vendor.js')
+
+function add(a, b) {
+  return a + b
+}
+
+function minutes(a, b) {
+  return a - b
+}
+
+let array = [1, 2, 3, 4]
+let sum = array.reduce((ret, it) => ret + it, 0)
+
 
 //   return xxx
 // )()

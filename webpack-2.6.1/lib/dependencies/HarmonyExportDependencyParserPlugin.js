@@ -35,11 +35,13 @@ module.exports = class HarmonyExportDependencyParserPlugin {
 			parser.state.current.addDependency(dep);
 			return true;
 		});
-		parser.plugin("export declaration", statement => {});
+
+		parser.plugin("export declaration", statement => { });
+
 		parser.plugin("export specifier", (statement, id, name, idx) => {
 			const rename = parser.scope.renames[`$${id}`];
 			let dep;
-			if(rename === "imported var") {
+			if (rename === "imported var") {
 				const settings = parser.state.harmonySpecifier[`$${id}`];
 				dep = new HarmonyExportImportedSpecifierDependency(parser.state.module, settings[0], settings[1], settings[2], name);
 			} else {
@@ -63,13 +65,13 @@ module.exports = class HarmonyExportDependencyParserPlugin {
 };
 
 function isImmutableStatement(statement) {
-	if(statement.type === "FunctionDeclaration") return true;
-	if(statement.type === "ClassDeclaration") return true;
-	if(statement.type === "VariableDeclaration" && statement.kind === "const") return true;
+	if (statement.type === "FunctionDeclaration") return true;
+	if (statement.type === "ClassDeclaration") return true;
+	if (statement.type === "VariableDeclaration" && statement.kind === "const") return true;
 	return false;
 }
 
 function isHoistedStatement(statement) {
-	if(statement.type === "FunctionDeclaration") return true;
+	if (statement.type === "FunctionDeclaration") return true;
 	return false;
 }

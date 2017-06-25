@@ -5,6 +5,9 @@
 
 "use strict";
 
+/**
+ * 已经被执行的表达式 ( 表达式的执行结果 )
+ */
 class BasicEvaluatedExpression {
 
 	constructor() {
@@ -48,7 +51,8 @@ class BasicEvaluatedExpression {
 	}
 
 	isWrapped() {
-		return Object.prototype.hasOwnProperty.call(this, "prefix") || Object.prototype.hasOwnProperty.call(this, "postfix");
+		return Object.prototype.hasOwnProperty.call(this, "prefix") || 
+			Object.prototype.hasOwnProperty.call(this, "postfix");
 	}
 
 	isTemplateString() {
@@ -71,9 +75,14 @@ class BasicEvaluatedExpression {
 			}
 			// can't tell if string will be empty without executing
 		}
+
 		return undefined;
 	}
 
+	/**
+	 * 
+	 * @param {String} str 
+	 */
 	setString(str) {
 		if(str === null)
 			delete this.string;
@@ -87,6 +96,10 @@ class BasicEvaluatedExpression {
 		return this;
 	}
 
+	/**
+	 * 
+	 * @param {Number} num 
+	 */
 	setNumber(num) {
 		if(num === null)
 			delete this.number;
@@ -171,11 +184,14 @@ class BasicEvaluatedExpression {
 		return this;
 	}
 
+	/**
+	 * 代码所在的位置
+	 * @param {Tuple[start,end]} range 
+	 */
 	setRange(range) {
 		this.range = range;
 		return this;
 	}
-
 }
 
 module.exports = BasicEvaluatedExpression;

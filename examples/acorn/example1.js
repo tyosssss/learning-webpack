@@ -1,4 +1,20 @@
 const source = `
+  // export default 42;
+  // export var foo = 1;
+  // export {foo as default, bar}
+  // export {foo as default, bar} from '../1'
+
+  // import {firstName as cc, lastName, year} from './profile';
+  // import aa from './profile';
+  // import * as local from '/profile'
+
+  // var [a,b,...c] = [1,2,3,4]
+  var {a ,b : dd , d = 1 + 2,  c : { d }} = {}
+  // function a(f=1){}
+
+  // a = a +1
+
+
   var b1 = a['a']
   var b3 = (a,b)=>void 666;
   ;
@@ -43,8 +59,8 @@ const acorn = require('acorn')
 
 
 ast = acorn.parse(source, {
-  ranges: true,
-  locations: true,
+  ranges: false,
+  locations: false,
   ecmaVersion: 2017,
   sourceType: "module"
 });
