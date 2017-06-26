@@ -23,7 +23,7 @@ const BasicEvaluatedExpression = require("./BasicEvaluatedExpression");
  * 解析器的作用域 -- 表示遍历代码时的作用域
  * @typedef {Object} ParserScope
  * @property {String[]} definitions 存储所有的声明定义的名称 -- 变量名,常量名,函数名,类名,函数参数
- * @property {Map<name : String , :>} renames 
+ * @property {Map<name : String , rename: String>} renames 存储标志符与别名的映射
  * @property {Boolean} [inTry=false] 作用域是否在try语句中
  * @property {Boolean} [inShorthand=false] 作用域是否在对象的简写函数中
  */
@@ -121,6 +121,9 @@ class Parser extends Tapable {
         return new BasicEvaluatedExpression().setRegExp(expr.value).setRange(expr.range);
     });
 
+    /**
+     * 对"标志符"进行求值 , 返回求值结果
+     */
     this.plugin("evaluate LogicalExpression", function (expr) {
       let left;
       let leftAsBool;
@@ -142,6 +145,9 @@ class Parser extends Tapable {
       }
     });
 
+    /**
+     * 对"标志符"进行求值 , 返回求值结果
+     */
     this.plugin("evaluate BinaryExpression", function (expr) {
       let left;
       let right;
@@ -263,6 +269,9 @@ class Parser extends Tapable {
       }
     });
 
+    /**
+     * 对"标志符"进行求值 , 返回求值结果
+     */
     this.plugin("evaluate UnaryExpression", function (expr) {
       if (expr.operator === "typeof") {
         let res;
@@ -311,14 +320,26 @@ class Parser extends Tapable {
       }
     });
 
+    /**
+     * 对"标志符"进行求值 , 返回求值结果
+     */
     this.plugin("evaluate typeof undefined", function (expr) {
       return new BasicEvaluatedExpression().setString("undefined").setRange(expr.range);
     });
 
+    /**
+     * 对"标志符"进行求值 , 返回求值结果
+     */
     this.plugin("evaluate Identifier", function (expr) {
+      // 优先使用别名
       const name = this.scope.renames["$" + expr.name] || expr.name;
+
+      // 如果 作用域中没有定义该标志 , 那么进行求值,并返回结果
+      // 否则 直接返回结果
       if (this.scope.definitions.indexOf(expr.name) === -1) {
+
         const result = this.applyPluginsBailResult1("evaluate Identifier " + name, expr);
+
         if (result) return result;
         return new BasicEvaluatedExpression().setIdentifier(name).setRange(expr.range);
       } else {
@@ -326,6 +347,9 @@ class Parser extends Tapable {
       }
     });
 
+    /**
+     * 对"标志符"进行求值 , 返回求值结果
+     */
     this.plugin("evaluate MemberExpression", function (expression) {
       let expr = expression;
       let exprName = [];
@@ -349,6 +373,9 @@ class Parser extends Tapable {
       }
     });
 
+    /**
+     * 对"标志符"进行求值 , 返回求值结果
+     */
     this.plugin("evaluate CallExpression", function (expr) {
       if (expr.callee.type !== "MemberExpression") return;
       if (expr.callee.property.type !== (expr.callee.computed ? "Literal" : "Identifier")) return;
@@ -358,6 +385,9 @@ class Parser extends Tapable {
       return this.applyPluginsBailResult("evaluate CallExpression ." + property, expr, param);
     });
 
+    /**
+     * 对"标志符"进行求值 , 返回求值结果
+     */
     this.plugin("evaluate CallExpression .replace", function (expr, param) {
       if (!param.isString()) return;
       if (expr.arguments.length !== 2) return;
@@ -370,6 +400,9 @@ class Parser extends Tapable {
       return new BasicEvaluatedExpression().setString(param.string.replace(arg1, arg2)).setRange(expr.range);
     });
 
+    /**
+     * 对"标志符"进行求值 , 返回求值结果
+     */
     ["substr", "substring"].forEach(fn => {
       this.plugin("evaluate CallExpression ." + fn, function (expr, param) {
         if (!param.isString()) return;
@@ -436,6 +469,9 @@ class Parser extends Tapable {
       });
     });
 
+    /**
+     * 对"标志符"进行求值 , 返回求值结果
+     */
     this.plugin("evaluate CallExpression .split", function (expr, param) {
       if (!param.isString()) return;
       if (expr.arguments.length !== 1) return;
@@ -449,6 +485,9 @@ class Parser extends Tapable {
       return new BasicEvaluatedExpression().setArray(result).setRange(expr.range);
     });
 
+    /**
+     * 对"标志符"进行求值 , 返回求值结果
+     */
     this.plugin("evaluate ConditionalExpression", function (expr) {
       const condition = this.evaluateExpression(expr.test);
       const conditionValue = condition.asBool();
@@ -473,6 +512,9 @@ class Parser extends Tapable {
       return res;
     });
 
+    /**
+     * 对"标志符"进行求值 , 返回求值结果
+     */
     this.plugin("evaluate ArrayExpression", function (expr) {
       const items = expr.elements.map(function (element) {
         return element !== null && this.evaluateExpression(element);
@@ -585,7 +627,8 @@ class Parser extends Tapable {
   }
 
   /**
-   * 预遍历 do...while语句 -- 遍历do...while语句的语句块  do { body } while(test)
+   * 预遍历 do...while语句 -- 遍历do...while语句的语句块  
+   * do { body } while(test)
    * @param {StatementNode} 语句节点
    */
   prewalkDoWhileStatement(statement) {
@@ -798,7 +841,7 @@ class Parser extends Tapable {
   }
 
   /**
-   * 变量声明语句的声明部分 -- 遍历声明部分 , 将找到的声明定义记录下来 ( 记录在scope中 )
+   * 预遍历 变量声明语句的声明部分 -- 遍历声明部分 , 将找到的声明定义记录下来 ( 记录在scope中 )
    * 
    * @param {VariableDeclarator[]} declarators 声明部分
    */
@@ -959,19 +1002,49 @@ class Parser extends Tapable {
     this.walkSwitchCases(statement.cases);
   }
 
+  /**
+   * 遍历 case语句 -- 遍历 case语句中语句块 case test : consequent
+   * @param {StatementNode} 语句节点
+   */
+  walkSwitchCases(switchCases) {
+    for (let index = 0, len = switchCases.length; index < len; index++) {
+      const switchCase = switchCases[index];
+
+      // 遍历test表达式
+      if (switchCase.test) {
+        this.walkExpression(switchCase.test);
+      }
+
+      this.walkStatements(switchCase.consequent);
+    }
+  }
+
+  /**
+   * 遍历 return语句 -- 遍历表达式部分
+   * @param {StatementNode} 语句节点
+   */
+  walkReturnStatement(statement) {
+    this.walkTerminatingStatement(statement);
+  }
+
+  /**
+   * 遍历 throw语句 -- 遍历表达式部分
+   * @param {StatementNode} 语句节点
+   */
+  walkThrowStatement(statement) {
+    this.walkTerminatingStatement(statement);
+  }
+
   walkTerminatingStatement(statement) {
     if (statement.argument)
       this.walkExpression(statement.argument);
   }
 
-  walkReturnStatement(statement) {
-    this.walkTerminatingStatement(statement);
-  }
-
-  walkThrowStatement(statement) {
-    this.walkTerminatingStatement(statement);
-  }
-
+  /**
+   * 遍历 try.catch.finally语句 -- 遍历 try语句块  
+   * try { block } catch() { handler } finally { finalizer }
+   * @param {StatementNode} 语句节点
+   */
   walkTryStatement(statement) {
     if (this.scope.inTry) {
       this.walkStatement(statement.block);
@@ -980,22 +1053,53 @@ class Parser extends Tapable {
       this.walkStatement(statement.block);
       this.scope.inTry = false;
     }
+
     if (statement.handler)
       this.walkCatchClause(statement.handler);
+
     if (statement.finalizer)
       this.walkStatement(statement.finalizer);
   }
 
+  /**
+   * 遍历 catch语句 -
+   * @param {StatementNode} catchClause 语句节点
+   */
+  walkCatchClause(catchClause) {
+    // 进入作用域
+    this.inScope([catchClause.param], function () {
+      this.prewalkStatement(catchClause.body);
+      this.walkStatement(catchClause.body);
+    }.bind(this));
+  }
+
+  /**
+   * 遍历 while语句 -- 遍历do...while语句的语句块  
+   * do { body } while(test)
+   * @param {StatementNode} 语句节点
+   */
   walkWhileStatement(statement) {
     this.walkExpression(statement.test);
     this.walkStatement(statement.body);
   }
 
+  /**
+   * 遍历 do...while语句 -- 遍历do...while语句的语句块  
+   * do { body } while(test)
+   * @param {StatementNode} 语句节点
+   */
   walkDoWhileStatement(statement) {
     this.walkStatement(statement.body);
     this.walkExpression(statement.test);
   }
 
+  /**
+   * 遍历 for语句 -- 遍历for语句的初始化的变量声明和语句块部分 
+   * 
+   * for ( <init> ; <test> ; <update> ) { <body> }
+   * 
+   * @param {StatementNode} 语句节点
+   */
   walkForStatement(statement) {
     if (statement.init) {
       if (statement.init.type === "VariableDeclaration")
@@ -1003,10 +1107,13 @@ class Parser extends Tapable {
       else
         this.walkExpression(statement.init);
     }
+
     if (statement.test)
       this.walkExpression(statement.test);
+
     if (statement.update)
       this.walkExpression(statement.update);
+
     this.walkStatement(statement.body);
   }
 
@@ -1026,20 +1133,6 @@ class Parser extends Tapable {
       this.walkExpression(statement.left);
     this.walkExpression(statement.right);
     this.walkStatement(statement.body);
-  }
-
-  walkFunctionDeclaration(statement) {
-    statement.params.forEach(param => {
-      this.walkPattern(param);
-    });
-    this.inScope(statement.params, function () {
-      if (statement.body.type === "BlockStatement") {
-        this.prewalkStatement(statement.body);
-        this.walkStatement(statement.body);
-      } else {
-        this.walkExpression(statement.body);
-      }
-    }.bind(this));
   }
 
   walkExportNamedDeclaration(statement) {
@@ -1071,40 +1164,44 @@ class Parser extends Tapable {
       this.walkVariableDeclarators(statement.declarations);
   }
 
-  walkClassDeclaration(statement) {
-    this.walkClass(statement);
-  }
-
-  walkSwitchCases(switchCases) {
-    for (let index = 0, len = switchCases.length; index < len; index++) {
-      const switchCase = switchCases[index];
-
-      if (switchCase.test) {
-        this.walkExpression(switchCase.test);
+  walkFunctionDeclaration(statement) {
+    statement.params.forEach(param => {
+      this.walkPattern(param);
+    });
+    this.inScope(statement.params, function () {
+      if (statement.body.type === "BlockStatement") {
+        this.prewalkStatement(statement.body);
+        this.walkStatement(statement.body);
+      } else {
+        this.walkExpression(statement.body);
       }
-      this.walkStatements(switchCase.consequent);
-    }
-  }
-
-  walkCatchClause(catchClause) {
-    this.inScope([catchClause.param], function () {
-      this.prewalkStatement(catchClause.body);
-      this.walkStatement(catchClause.body);
     }.bind(this));
   }
 
+  /**
+   * 遍历 变量声明语句的声明部分
+   * 
+   * @param {VariableDeclarator[]} declarators 声明部分
+   */
   walkVariableDeclarators(declarators) {
     declarators.forEach(declarator => {
       switch (declarator.type) {
         case "VariableDeclarator":
           {
             const renameIdentifier = declarator.init && this.getRenameIdentifier(declarator.init);
-            if (renameIdentifier && declarator.id.type === "Identifier" && this.applyPluginsBailResult1("can-rename " + renameIdentifier, declarator.init)) {
+
+            if (renameIdentifier &&
+              declarator.id.type === "Identifier" &&
+              this.applyPluginsBailResult1("can-rename " + renameIdentifier, declarator.init)) {
               // renaming with "var a = b;"
               if (!this.applyPluginsBailResult1("rename " + renameIdentifier, declarator.init)) {
+
                 this.scope.renames["$" + declarator.id.name] = this.scope.renames["$" + renameIdentifier] || renameIdentifier;
                 const idx = this.scope.definitions.indexOf(declarator.id.name);
-                if (idx >= 0) this.scope.definitions.splice(idx, 1);
+
+                if (idx >= 0) {
+                  this.scope.definitions.splice(idx, 1);
+                }
               }
             } else {
               this.walkPattern(declarator.id);
@@ -1125,6 +1222,10 @@ class Parser extends Tapable {
     }
   }
 
+  walkClassDeclaration(statement) {
+    this.walkClass(statement);
+  }
+
   /**
    * 遍历类 -- 
    * @param {ClassDeclaration} classy 类的声明节点
@@ -1133,7 +1234,7 @@ class Parser extends Tapable {
     // 遍历 超类
     if (classy.superClass)
       this.walkExpression(classy.superClass);
-    
+
     // 遍历 类的主体
     if (classy.body && classy.body.type === "ClassBody") {
       classy.body.body.forEach(methodDefinition => {
@@ -1148,17 +1249,13 @@ class Parser extends Tapable {
    * @param {*} methodDefinition 
    */
   walkMethodDefinition(methodDefinition) {
-    
+
     if (methodDefinition.computed && methodDefinition.key)
       this.walkExpression(methodDefinition.key);
-    
+
     if (methodDefinition.value)
       this.walkExpression(methodDefinition.value);
   }
-
-
-
-
 
 
 
@@ -1295,6 +1392,7 @@ class Parser extends Tapable {
     expression.params.forEach(param => {
       this.walkPattern(param);
     });
+
     this.inScope(expression.params, function () {
       if (expression.body.type === "BlockStatement") {
         this.prewalkStatement(expression.body);
@@ -1356,14 +1454,14 @@ class Parser extends Tapable {
        *  普通的属性名
        *  作用域中没有定义该属性
        * 那么
-       *  
+       *  emit "typeof "
        */
       if (expr.type === "Identifier" && this.scope.definitions.indexOf(expr.name) === -1) {
         exprName.unshift(this.scope.renames["$" + expr.name] || expr.name);
         exprName = exprName.join(".");
-        
+
         const result = this.applyPluginsBailResult1("typeof " + exprName, expression);
-        
+
         if (result === true)
           return;
       }
@@ -1399,10 +1497,12 @@ class Parser extends Tapable {
 
   /**
    * 遍历 赋值表达式 -- 
+   * <left> = <right>
    * @param {Expression} expression 表达式节点
    */
   walkAssignmentExpression(expression) {
     const renameIdentifier = this.getRenameIdentifier(expression.right);
+
     if (expression.left.type === "Identifier" && renameIdentifier && this.applyPluginsBailResult1("can-rename " + renameIdentifier, expression.right)) {
       // renaming "a = b;"
       if (!this.applyPluginsBailResult1("rename " + renameIdentifier, expression.right)) {
@@ -1433,7 +1533,7 @@ class Parser extends Tapable {
    */
   walkConditionalExpression(expression) {
     const result = this.applyPluginsBailResult1("expression ?:", expression);
-    
+
     if (result === undefined) {
       this.walkExpression(expression.test);
       this.walkExpression(expression.consequent);
@@ -1453,7 +1553,7 @@ class Parser extends Tapable {
    */
   walkNewExpression(expression) {
     this.walkExpression(expression.callee);
-    
+
     if (expression.arguments)
       this.walkExpressions(expression.arguments);
   }
@@ -1483,7 +1583,7 @@ class Parser extends Tapable {
   walkTaggedTemplateExpression(expression) {
     if (expression.tag)
       this.walkExpression(expression.tag);
-    
+
     if (expression.quasi && expression.quasi.expressions)
       this.walkExpressions(expression.quasi.expressions);
   }
@@ -1592,35 +1692,40 @@ class Parser extends Tapable {
   }
 
   /**
-   * 执行指定表达式
-   * @param {Expression} expression 
+   * 对表达式求值 
+   * 如果 结果是标志符,则 返回别名标志符
+   * 如果 结果不是标志符,则 返回undefined
+   * 
+   * @param {Expression} expr 表达式
+   * @returns {String|undefined}
+   */
+  getRenameIdentifier(expr) {
+    const result = this.evaluateExpression(expr);
+
+    if (!result) return;
+
+    // 结果是一个标志符 , 那么返回该标志符的名称
+    if (result.isIdentifier()) return result.identifier;
+
+    return;
+  }
+
+  /**
+   * 对执行表达式进行求值 , 并返回求值结果
+   * @param {Expression} expression 表达式节点
    * @returns {BasicEvaluatedExpression} 
    */
   evaluateExpression(expression) {
     try {
       const result = this.applyPluginsBailResult1("evaluate " + expression.type, expression);
 
-      if (result !== undefined)
-        return result;
+      if (result !== undefined) return result;
     } catch (e) {
       console.warn(e);
       // ignore error
     }
 
     return new BasicEvaluatedExpression().setRange(expression.range);
-  }
-
-  /**
-   * 
-   * @param {Expression} expr 
-   */
-  getRenameIdentifier(expr) {
-    const result = this.evaluateExpression(expr);
-
-    if (!result) return;
-    if (result.isIdentifier()) return result.identifier;
-
-    return;
   }
 
   /**
@@ -1804,6 +1909,84 @@ class Parser extends Tapable {
   }
 
 
+
+  /**
+   * 解析源代码
+   * @param {String} source 源代码
+   * @param {Object} initialState 初始状态
+   * @returns {Object} 返回最终的状态
+   */
+  parse(source, initialState) {
+    let ast;
+    const comments = [];
+
+    for (let i = 0, len = POSSIBLE_AST_OPTIONS.length; i < len; i++) {
+      if (!ast) {
+        try {
+          comments.length = 0;
+          POSSIBLE_AST_OPTIONS[i].onComment = comments;
+          ast = acorn.parse(source, POSSIBLE_AST_OPTIONS[i]);
+        } catch (e) {
+          // ignore the error
+        }
+      }
+    }
+
+    if (!ast) {
+      // for the error
+      ast = acorn.parse(source, {
+        ranges: true,
+        locations: true,
+        ecmaVersion: 2017,
+        sourceType: "module",
+        plugins: {
+          dynamicImport: true
+        },
+        onComment: comments
+      });
+    }
+
+    if (!ast || typeof ast !== "object")
+      throw new Error("Source couldn't be parsed");
+
+    const oldScope = this.scope;
+    const oldState = this.state;
+    const oldComments = this.comments;
+
+    // 初始化作用域
+    this.scope = {
+      inTry: false,
+      definitions: [],
+      renames: {}
+    };
+
+    const state = this.state = initialState || {};
+
+    // 保存注释
+    this.comments = comments;
+
+    //
+    // 
+    //
+    if (this.applyPluginsBailResult("program", ast, comments) === undefined) {
+      this.prewalkStatements(ast.body);
+
+      this.walkStatements(ast.body);
+    }
+
+    //
+    // 
+    //
+    this.scope = oldScope;
+    this.state = oldState;
+    this.comments = oldComments;
+
+    return state;
+  }
+
+
+
+
   /**
    * 
    * @param {*} expression 
@@ -1913,82 +2096,6 @@ class Parser extends Tapable {
         arr.push(this.parseCalculatedString(expr));
       }, this);
     return arr;
-  }
-
-
-
-  /**
-   * 解析源代码
-   * @param {String} source 源代码
-   * @param {Object} initialState 初始状态
-   * @returns {Object} 返回最终的状态
-   */
-  parse(source, initialState) {
-    let ast;
-    const comments = [];
-
-    for (let i = 0, len = POSSIBLE_AST_OPTIONS.length; i < len; i++) {
-      if (!ast) {
-        try {
-          comments.length = 0;
-          POSSIBLE_AST_OPTIONS[i].onComment = comments;
-          ast = acorn.parse(source, POSSIBLE_AST_OPTIONS[i]);
-        } catch (e) {
-          // ignore the error
-        }
-      }
-    }
-
-    if (!ast) {
-      // for the error
-      ast = acorn.parse(source, {
-        ranges: true,
-        locations: true,
-        ecmaVersion: 2017,
-        sourceType: "module",
-        plugins: {
-          dynamicImport: true
-        },
-        onComment: comments
-      });
-    }
-
-    if (!ast || typeof ast !== "object")
-      throw new Error("Source couldn't be parsed");
-
-    const oldScope = this.scope;
-    const oldState = this.state;
-    const oldComments = this.comments;
-
-    // 初始化作用域
-    this.scope = {
-      inTry: false,
-      definitions: [],
-      renames: {}
-    };
-
-    const state = this.state = initialState || {};
-
-    // 保存注释
-    this.comments = comments;
-
-    //
-    // 
-    //
-    if (this.applyPluginsBailResult("program", ast, comments) === undefined) {
-      this.prewalkStatements(ast.body);
-
-      this.walkStatements(ast.body);
-    }
-
-    //
-    // 
-    //
-    this.scope = oldScope;
-    this.state = oldState;
-    this.comments = oldComments;
-
-    return state;
   }
 
   /**

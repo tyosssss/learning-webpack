@@ -9,7 +9,6 @@
  * 已经被执行的表达式 ( 表达式的执行结果 )
  */
 class BasicEvaluatedExpression {
-
 	constructor() {
 		this.range = null;
 	}
@@ -46,12 +45,15 @@ class BasicEvaluatedExpression {
 		return Object.prototype.hasOwnProperty.call(this, "array");
 	}
 
+	/**
+	 * 是
+	 */
 	isIdentifier() {
 		return Object.prototype.hasOwnProperty.call(this, "identifier");
 	}
 
 	isWrapped() {
-		return Object.prototype.hasOwnProperty.call(this, "prefix") || 
+		return Object.prototype.hasOwnProperty.call(this, "prefix") ||
 			Object.prototype.hasOwnProperty.call(this, "postfix");
 	}
 
@@ -60,18 +62,18 @@ class BasicEvaluatedExpression {
 	}
 
 	asBool() {
-		if(this.isBoolean()) return this.bool;
-		else if(this.isNull()) return false;
-		else if(this.isString()) return !!this.string;
-		else if(this.isNumber()) return !!this.number;
-		else if(this.isRegExp()) return true;
-		else if(this.isArray()) return true;
-		else if(this.isConstArray()) return true;
-		else if(this.isWrapped()) return this.prefix && this.prefix.asBool() || this.postfix && this.postfix.asBool() ? true : undefined;
-		else if(this.isTemplateString()) {
-			if(this.quasis.length === 1) return this.quasis[0].asBool();
-			for(let i = 0; i < this.quasis.length; i++) {
-				if(this.quasis[i].asBool()) return true;
+		if (this.isBoolean()) return this.bool;
+		else if (this.isNull()) return false;
+		else if (this.isString()) return !!this.string;
+		else if (this.isNumber()) return !!this.number;
+		else if (this.isRegExp()) return true;
+		else if (this.isArray()) return true;
+		else if (this.isConstArray()) return true;
+		else if (this.isWrapped()) return this.prefix && this.prefix.asBool() || this.postfix && this.postfix.asBool() ? true : undefined;
+		else if (this.isTemplateString()) {
+			if (this.quasis.length === 1) return this.quasis[0].asBool();
+			for (let i = 0; i < this.quasis.length; i++) {
+				if (this.quasis[i].asBool()) return true;
 			}
 			// can't tell if string will be empty without executing
 		}
@@ -84,7 +86,7 @@ class BasicEvaluatedExpression {
 	 * @param {String} str 
 	 */
 	setString(str) {
-		if(str === null)
+		if (str === null)
 			delete this.string;
 		else
 			this.string = str;
@@ -101,7 +103,7 @@ class BasicEvaluatedExpression {
 	 * @param {Number} num 
 	 */
 	setNumber(num) {
-		if(num === null)
+		if (num === null)
 			delete this.number;
 		else
 			this.number = num;
@@ -109,7 +111,7 @@ class BasicEvaluatedExpression {
 	}
 
 	setBoolean(bool) {
-		if(bool === null)
+		if (bool === null)
 			delete this.bool;
 		else
 			this.bool = bool;
@@ -117,27 +119,39 @@ class BasicEvaluatedExpression {
 	}
 
 	setRegExp(regExp) {
-		if(regExp === null)
+		if (regExp === null)
 			delete this.regExp;
 		else
 			this.regExp = regExp;
 		return this;
 	}
 
+	/**
+	 * 设置 表达式的标志符
+	 * @param {String} identifier 
+	 */
 	setIdentifier(identifier) {
-		if(identifier === null)
+		if (identifier === null)
 			delete this.identifier;
 		else
 			this.identifier = identifier;
 		return this;
 	}
 
+	/**
+	 * 
+	 * @param {*} prefix 
+	 * @param {*} postfix 
+	 */
 	setWrapped(prefix, postfix) {
 		this.prefix = prefix;
 		this.postfix = postfix;
 		return this;
 	}
 
+	/**
+	 * 
+	 */
 	unsetWrapped() {
 		delete this.prefix;
 		delete this.postfix;
@@ -145,7 +159,7 @@ class BasicEvaluatedExpression {
 	}
 
 	setOptions(options) {
-		if(options === null)
+		if (options === null)
 			delete this.options;
 		else
 			this.options = options;
@@ -153,7 +167,7 @@ class BasicEvaluatedExpression {
 	}
 
 	setItems(items) {
-		if(items === null)
+		if (items === null)
 			delete this.items;
 		else
 			this.items = items;
@@ -161,7 +175,7 @@ class BasicEvaluatedExpression {
 	}
 
 	setArray(array) {
-		if(array === null)
+		if (array === null)
 			delete this.array;
 		else
 			this.array = array;
@@ -169,7 +183,7 @@ class BasicEvaluatedExpression {
 	}
 
 	setTemplateString(quasis) {
-		if(quasis === null)
+		if (quasis === null)
 			delete this.quasis;
 		else
 			this.quasis = quasis;
@@ -177,7 +191,7 @@ class BasicEvaluatedExpression {
 	}
 
 	addOptions(options) {
-		if(!this.options) this.options = [];
+		if (!this.options) this.options = [];
 		options.forEach(item => {
 			this.options.push(item);
 		}, this);
@@ -185,7 +199,7 @@ class BasicEvaluatedExpression {
 	}
 
 	/**
-	 * 代码所在的位置
+	 * 设置 表达式的位置
 	 * @param {Tuple[start,end]} range 
 	 */
 	setRange(range) {
