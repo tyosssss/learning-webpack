@@ -950,6 +950,10 @@ class Parser extends Tapable {
     this.walkStatement(statement.body);
   }
 
+  /**
+   * 遍历 switch语句 -- 遍历 switch语句中case部分 switch(discriminant){ cases[] }
+   * @param {StatementNode} 语句节点
+   */
   walkSwitchStatement(statement) {
     this.walkExpression(statement.discriminant);
     this.walkSwitchCases(statement.cases);
@@ -1122,12 +1126,15 @@ class Parser extends Tapable {
   }
 
   /**
-   * 
-   * @param {*} classy 
+   * 遍历类 -- 
+   * @param {ClassDeclaration} classy 类的声明节点
    */
   walkClass(classy) {
+    // 遍历 超类
     if (classy.superClass)
       this.walkExpression(classy.superClass);
+    
+    // 遍历 类的主体
     if (classy.body && classy.body.type === "ClassBody") {
       classy.body.body.forEach(methodDefinition => {
         if (methodDefinition.type === "MethodDefinition")
@@ -1141,8 +1148,10 @@ class Parser extends Tapable {
    * @param {*} methodDefinition 
    */
   walkMethodDefinition(methodDefinition) {
+    
     if (methodDefinition.computed && methodDefinition.key)
       this.walkExpression(methodDefinition.key);
+    
     if (methodDefinition.value)
       this.walkExpression(methodDefinition.value);
   }
@@ -1191,7 +1200,7 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 表达式 -- 遍历 数组表达式的元素部分
+   * 遍历 数组表达式 -- 遍历 数组表达式的元素部分
    * [elements]
    * 
    * @param {Expression} expression 表达式节点
@@ -1215,7 +1224,7 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 表达式 -- 针对属性的特性进行相应的处理
+   * 遍历 对象表达式 -- 针对属性的特性进行相应的处理
    * {properties}
    * 
    * @param {Expression} expression 表达式节点
@@ -1308,7 +1317,9 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 表达式 -- 
+   * 遍历 自增/自减表达式 -- 遍历 表达式中的参数
+   * ++<argument>
+   * 
    * @param {Expression} expression 表达式节点
    */
   walkUpdateExpression(expression) {
@@ -1316,39 +1327,53 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 表达式 -- 
+   * 遍历 一元表达式 -- 
+   * typedef | delete | - | + | ! | ~ <argument>
    * @param {Expression} expression 表达式节点
    */
   walkUnaryExpression(expression) {
+    /**
+     * 如果 是typedef 运算
+     * 那么 
+     */
     if (expression.operator === "typeof") {
       let expr = expression.argument;
       let exprName = [];
-      while (expr.type === "MemberExpression" && expr.property.type === (expr.computed ? "Literal" : "Identifier")) {
+
+      /**
+       * 处理对象运算 , 获得最终的标识符
+       */
+      while (
+        expr.type === "MemberExpression" &&
+        expr.property.type === (expr.computed ? "Literal" : "Identifier")
+      ) {
         exprName.unshift(expr.property.name || expr.property.value);
         expr = expr.object;
       }
+
+      /**
+       * 如果
+       *  普通的属性名
+       *  作用域中没有定义该属性
+       * 那么
+       *  
+       */
       if (expr.type === "Identifier" && this.scope.definitions.indexOf(expr.name) === -1) {
         exprName.unshift(this.scope.renames["$" + expr.name] || expr.name);
         exprName = exprName.join(".");
+        
         const result = this.applyPluginsBailResult1("typeof " + exprName, expression);
+        
         if (result === true)
           return;
       }
     }
+
     this.walkExpression(expression.argument);
   }
 
   /**
-   * 遍历 表达式 -- 
-   * @param {Expression} expression 表达式节点
-   */
-  walkLeftRightExpression(expression) {
-    this.walkExpression(expression.left);
-    this.walkExpression(expression.right);
-  }
-
-  /**
-   * 遍历 表达式 -- 
+   * 遍历 二元表达式 -- 遍历左值部分和右值部分
    * @param {Expression} expression 表达式节点
    */
   walkBinaryExpression(expression) {
@@ -1356,11 +1381,20 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 表达式 -- 
+   * 遍历 逻辑表达式 -- 遍历左值部分和右值部分
    * @param {Expression} expression 表达式节点
    */
   walkLogicalExpression(expression) {
     this.walkLeftRightExpression(expression);
+  }
+
+  /**
+   * 遍历 用于左值和右值的表达式 -- 
+   * @param {Expression} expression 表达式节点
+   */
+  walkLeftRightExpression(expression) {
+    this.walkExpression(expression.left);
+    this.walkExpression(expression.right);
   }
 
   /**
@@ -1394,11 +1428,12 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 表达式 -- 
+   * 遍历 三元表达式 -- 与 if语句类似
    * @param {Expression} expression 表达式节点
    */
   walkConditionalExpression(expression) {
     const result = this.applyPluginsBailResult1("expression ?:", expression);
+    
     if (result === undefined) {
       this.walkExpression(expression.test);
       this.walkExpression(expression.consequent);
@@ -1413,17 +1448,18 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 表达式 -- 
+   * 遍历 new表达式 -- 遍历 调用者部分和参数部分
    * @param {Expression} expression 表达式节点
    */
   walkNewExpression(expression) {
     this.walkExpression(expression.callee);
+    
     if (expression.arguments)
       this.walkExpressions(expression.arguments);
   }
 
   /**
-   * 遍历 表达式 -- 
+   * 遍历 yield表达式 -- 
    * @param {Expression} expression 表达式节点
    */
   walkYieldExpression(expression) {
@@ -1432,7 +1468,7 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 表达式 -- 
+   * 遍历 模板字符串表达式 -- 遍历模板字符串中的表达式部分
    * @param {Expression} expression 表达式节点
    */
   walkTemplateLiteral(expression) {
@@ -1447,12 +1483,13 @@ class Parser extends Tapable {
   walkTaggedTemplateExpression(expression) {
     if (expression.tag)
       this.walkExpression(expression.tag);
+    
     if (expression.quasi && expression.quasi.expressions)
       this.walkExpressions(expression.quasi.expressions);
   }
 
   /**
-   * 遍历 表达式 -- 
+   * 遍历 类表达式 -- 
    * @param {Expression} expression 表达式节点
    */
   walkClassExpression(expression) {

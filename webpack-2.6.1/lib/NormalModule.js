@@ -72,6 +72,16 @@ class NonErrorEmittedError extends WebpackError {
  * @extends {Module}
  */
 class NormalModule extends Module {
+  /**
+   * 
+   * @param {String} request 请求的完整绝对路径 , 加载器按执行顺序 ( 所有加载器请求 + 资源请求 )
+   * @param {String} userRequest 用户请求的绝对路径 ( 行内加载器 + 资源请求 )
+   * @param {String} rawRequest 原始的请求路径
+   * @param {{{ident : String , loader : String , options : String|Object }[]}} loaders 所有的加载器配置
+   * @param {String} resource 模块对应的资源文件的绝对路径 ( 包括查询字符串 )
+   * @param {Parser} parser 代码解析器实例
+   * @memberof NormalModule
+   */
   constructor(request, userRequest, rawRequest, loaders, resource, parser) {
     super();
     this.request = request;

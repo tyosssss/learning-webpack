@@ -1,0 +1,29 @@
+1. webpack的编译过程构建在基于事件实现的插件系统 Tapable
+2. 一切都是插件     -- 代码可读性差
+3. 一切都是可定制的 -- 超级灵活
+
+
+
+
+
+基本流程 :
+
+        开始
+         |
+         |
+init option/internal plugin
+         |
+         |
+        run 运行 ( 编译 )
+         |                                                         ------------------------------------------------------                             
+         |                                                         |                                                    |
+        make 生成 -- add Entry -- parse path -- run loader --  build moudle/chunk -- parse code , find require() -- add module deps ( 生成依赖关系图 )
+         |                                                                                ( acorn AST )
+         |
+        seal 打包 -- moudle id -- chunk id -- hash -- asset ( 生成最终的代码 )
+         |
+         |
+        emit -- output asset ( 生成代码文件 )
+         |
+         |
+        结束

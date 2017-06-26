@@ -9,8 +9,10 @@ const source = `
   // import * as local from '/profile'
 
   // var [a,b,...c] = [1,2,3,4]
-  var {a ,b : dd , d = 1 + 2,  c : { d }} = {}
+  // var {a ,b : dd , d = 1 + 2,  c : { d }} = {}
   // function a(f=1){}
+
+  typeof a.b[1+1]
 
   // a = a +1
 
