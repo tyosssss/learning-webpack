@@ -8,17 +8,17 @@
 /**
  * 已经被执行的表达式 ( 表达式的执行结果 )
  * 
- * Null
- * String
- * Number
- * Boolean
- * RegExp
+ * Null           null
+ * String         字符窜
+ * Number         数字
+ * Boolean        布尔
+ * RegExp         正则表达式
  * Conditional
- * Array
+ * Array          数组
  * ConstArray
- * Identifier
- * Wrapped
- * TemplateString
+ * Identifier     标志符
+ * Wrapped        
+ * TemplateString 模板字符串
  */
 class BasicEvaluatedExpression {
   constructor() {
@@ -70,6 +70,10 @@ class BasicEvaluatedExpression {
     return Object.prototype.hasOwnProperty.call(this, "quasis");
   }
 
+  /**
+   * 将表达式的求值结果转换为bool类型
+   * @returns {Boolean|undefined} 返回最终的布尔类型
+   */
   asBool() {
     if (this.isBoolean()) return this.bool;
     else if (this.isNull()) return false;
@@ -149,12 +153,13 @@ class BasicEvaluatedExpression {
 
 	/**
 	 * 
-	 * @param {*} prefix 
-	 * @param {*} postfix 
+	 * @param {Any} prefix 
+	 * @param {Any} postfix 
 	 */
   setWrapped(prefix, postfix) {
     this.prefix = prefix;
     this.postfix = postfix;
+    
     return this;
   }
 
@@ -214,7 +219,7 @@ class BasicEvaluatedExpression {
   }
 
 	/**
-	 * 设置 表达式的位置
+	 * 设置 表达式求值结果对应的代码范围 ( 即表示那段代码的求值结果 )
 	 * @param {Tuple[start,end]} range 
 	 */
   setRange(range) {

@@ -22,8 +22,8 @@ class DependenciesBlock {
 	}
 	
 	/**
-	 * 添加块
-	 * @param {} block 
+	 * 为依赖块 , 添加它依赖的异步块
+	 * @param {AsyncDependenciesBlock} block 异步块
 	 */
 	addBlock(block) {
 		this.blocks.push(block);
@@ -46,7 +46,7 @@ class DependenciesBlock {
 	}
 
 	/**
-	 * 添加依赖
+	 * 为依赖块 , 添加它依赖的依赖实例
 	 * @param {Dependency} dependency 
 	 */
 	addDependency(dependency) {
@@ -54,7 +54,7 @@ class DependenciesBlock {
 	}
 
 	/**
-	 * 更新Hash
+	 * 为Block的所有依赖 , 更新用于计算Hash的原始值
 	 * @param {String} hash 
 	 */
 	updateHash(hash) {
@@ -62,9 +62,9 @@ class DependenciesBlock {
 			i.updateHash(hash);
 		}
 
-		this.dependencies.forEach(updateHash);
-		this.blocks.forEach(updateHash);
-		this.variables.forEach(updateHash);
+		this.dependencies.forEach(updateHash);	// 所有依赖
+		this.blocks.forEach(updateHash);				// 所有异步块
+		this.variables.forEach(updateHash);			// 所有变量
 	}
 
 	/**

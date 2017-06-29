@@ -103,7 +103,7 @@ class Parser extends Tapable {
    */
   initializeEvaluating() {
     /**
-     * 
+     * 模拟对"直接量"的求值过程 , 根据表达式类型 , 返回相应的表达式结果
      */
     this.plugin("evaluate Literal", expr => {
       switch (typeof expr.value) {
@@ -123,45 +123,69 @@ class Parser extends Tapable {
     });
 
     /**
-     * 对"标志符"进行求值 , 返回求值结果
+     * 模拟对"逻辑表达式"的求值过程
      */
     this.plugin("evaluate LogicalExpression", function (expr) {
       let left;
       let leftAsBool;
       let right;
+
       if (expr.operator === "&&") {
+        // 左值求值
         left = this.evaluateExpression(expr.left);
         leftAsBool = left && left.asBool();
+
+        // 左值结果 = false    模拟断点机制不继续执行 , 将左值的结果设置为表达式的结果
+        // 左值结果 = 不是布尔  返回undefined
         if (leftAsBool === false) return left.setRange(expr.range);
         if (leftAsBool !== true) return;
+
+        // 右值求值
         right = this.evaluateExpression(expr.right);
+
+        // 将右值的结果设置为表达式的结果
         return right.setRange(expr.range);
       } else if (expr.operator === "||") {
+        // 与 && 类似
         left = this.evaluateExpression(expr.left);
         leftAsBool = left && left.asBool();
+
         if (leftAsBool === true) return left.setRange(expr.range);
         if (leftAsBool !== false) return;
+
         right = this.evaluateExpression(expr.right);
+
         return right.setRange(expr.range);
       }
     });
 
     /**
-     * 对"标志符"进行求值 , 返回求值结果
+     * 对"二元表达式"的求值过程
      */
     this.plugin("evaluate BinaryExpression", function (expr) {
       let left;
       let right;
       let res;
-      if (expr.operator === "+") {
+
+      if (expr.operator === "+") { // 加法
+        // 左右部分分别求值
         left = this.evaluateExpression(expr.left);
         right = this.evaluateExpression(expr.right);
+
+        // 左值或右值部分无效 , 那么结果执行
         if (!left || !right) return;
+
         res = new BasicEvaluatedExpression();
+
+        /**
+         * 根据类型 , 分别对其进行相应的求值操作
+         */
         if (left.isString()) {
           if (right.isString()) {
+            // string + string
             res.setString(left.string + right.string);
           } else if (right.isNumber()) {
+            // string + number
             res.setString(left.string + right.number);
           } else if (right.isWrapped() && right.prefix && right.prefix.isString()) {
             res.setWrapped(
@@ -180,19 +204,23 @@ class Parser extends Tapable {
           }
         } else if (left.isNumber()) {
           if (right.isString()) {
+            // number + string
             res.setString(left.number + right.string);
           } else if (right.isNumber()) {
+            // number + number
             res.setNumber(left.number + right.number);
           }
         } else if (left.isWrapped()) {
           if (left.postfix && left.postfix.isString() && right.isString()) {
-            res.setWrapped(left.prefix,
+            res.setWrapped(
+              left.prefix,
               new BasicEvaluatedExpression()
                 .setString(left.postfix.string + right.string)
                 .setRange(joinRanges(left.postfix.range, right.range))
             );
           } else if (left.postfix && left.postfix.isString() && right.isNumber()) {
-            res.setWrapped(left.prefix,
+            res.setWrapped(
+              left.prefix,
               new BasicEvaluatedExpression()
                 .setString(left.postfix.string + right.number)
                 .setRange(joinRanges(left.postfix.range, right.range))
@@ -200,7 +228,8 @@ class Parser extends Tapable {
           } else if (right.isString()) {
             res.setWrapped(left.prefix, right);
           } else if (right.isNumber()) {
-            res.setWrapped(left.prefix,
+            res.setWrapped(
+              left.prefix,
               new BasicEvaluatedExpression()
                 .setString(right.number + "")
                 .setRange(right.range));
@@ -212,7 +241,9 @@ class Parser extends Tapable {
             res.setWrapped(null, right);
           }
         }
+        
         res.setRange(expr.range);
+        
         return res;
       } else if (expr.operator === "-") {
         left = this.evaluateExpression(expr.left);
@@ -271,7 +302,7 @@ class Parser extends Tapable {
     });
 
     /**
-     * 对"标志符"进行求值 , 返回求值结果
+     * 对"一元表达式"的求值过程 
      */
     this.plugin("evaluate UnaryExpression", function (expr) {
       if (expr.operator === "typeof") {
@@ -322,23 +353,22 @@ class Parser extends Tapable {
     });
 
     /**
-     * 对"标志符"进行求值 , 返回求值结果
+     * 对"typedef undefined"的求值过程 
      */
     this.plugin("evaluate typeof undefined", function (expr) {
       return new BasicEvaluatedExpression().setString("undefined").setRange(expr.range);
     });
 
     /**
-     * 对"标志符"进行求值 , 返回求值结果
+     * 对"标志符"的求值过程
      */
     this.plugin("evaluate Identifier", function (expr) {
-      // 优先使用别名
+      // 获得标志符的名称 , 优先使用标志符的别名
       const name = this.scope.renames["$" + expr.name] || expr.name;
 
-      // 如果 作用域中没有定义该标志 , 那么进行求值,并返回结果
+      // 如果 作用域中没有定义该标志 , 触发"evaluate Identifier [name]" , 进行求值操作
       // 否则 直接返回结果
       if (this.scope.definitions.indexOf(expr.name) === -1) {
-
         const result = this.applyPluginsBailResult1("evaluate Identifier " + name, expr);
 
         if (result) return result;
@@ -349,7 +379,7 @@ class Parser extends Tapable {
     });
 
     /**
-     * 对"标志符"进行求值 , 返回求值结果
+     * 对"访问对象表达式"的求值过程 
      */
     this.plugin("evaluate MemberExpression", function (expression) {
       let expr = expression;
@@ -375,7 +405,7 @@ class Parser extends Tapable {
     });
 
     /**
-     * 对"标志符"进行求值 , 返回求值结果
+     * 对"函数调用表达式"的求值过程 
      */
     this.plugin("evaluate CallExpression", function (expr) {
       if (expr.callee.type !== "MemberExpression") return;
@@ -387,7 +417,7 @@ class Parser extends Tapable {
     });
 
     /**
-     * 对"标志符"进行求值 , 返回求值结果
+     * 对"调用.replace方法"的求值过程
      */
     this.plugin("evaluate CallExpression .replace", function (expr, param) {
       if (!param.isString()) return;
@@ -402,7 +432,7 @@ class Parser extends Tapable {
     });
 
     /**
-     * 对"标志符"进行求值 , 返回求值结果
+     * 对"substr,sbustring方法"的求值过程
      */
     ["substr", "substring"].forEach(fn => {
       this.plugin("evaluate CallExpression ." + fn, function (expr, param) {
@@ -471,7 +501,7 @@ class Parser extends Tapable {
     });
 
     /**
-     * 对"标志符"进行求值 , 返回求值结果
+     * 对"split方法"的求值过程
      */
     this.plugin("evaluate CallExpression .split", function (expr, param) {
       if (!param.isString()) return;
@@ -487,7 +517,7 @@ class Parser extends Tapable {
     });
 
     /**
-     * 对"三元表达式"进行求值 , 返回求值结果
+     * 对"三元表达式"的求值过程 , 返回求值结果
      */
     this.plugin("evaluate ConditionalExpression", function (expr) {
       // 对条件进行求值
@@ -535,7 +565,7 @@ class Parser extends Tapable {
     });
 
     /**
-     * 对"标志符"进行求值 , 返回求值结果
+     * 对"数组访问表达式"的求值过程
      */
     this.plugin("evaluate ArrayExpression", function (expr) {
       const items = expr.elements.map(function (element) {
@@ -1307,7 +1337,7 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 await表达式 -- 遍历 away的表达式部分
+   * 遍历 await表达式 -- 继续遍历 await的表达式部分
    * await argument
    * @param {Expression} expression 表达式节点
    */
@@ -1319,7 +1349,7 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 数组表达式 -- 遍历 数组表达式的元素部分
+   * 遍历 数组表达式 -- 继续遍历 数组表达式的元素部分elements
    * [elements]
    * 
    * @param {Expression} expression 表达式节点
@@ -1330,7 +1360,7 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 spread表达式 -- 遍历 表达式的参数部分
+   * 遍历 spread表达式 -- 继续遍历 表达式的参数部分
    * 
    * { ... argument }
    * [ ... argument ]
@@ -1344,6 +1374,11 @@ class Parser extends Tapable {
 
   /**
    * 遍历 对象表达式 -- 针对属性的特性进行相应的处理
+   * 1. 如果key需要计算 , 那么继续遍历key部分的表达式
+   * 2. 修改作用域标志 inshorthand
+   * 3. 继续遍历value部分的表达式
+   * 4. 还原作用域
+   * 
    * {properties}
    * 
    * @param {Expression} expression 表达式节点
@@ -1370,18 +1405,18 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 函数表达式 -- 遍历函数体
+   * 遍历 函数表达式
+   * 1. 遍历参数列表
+   * 2. 根据参数构造一个新的作用域之后 , 遍历 函数体 ( 递归调用 prewalk , walk 模拟执行 )
+   * 
    * @param {Expression} expression 表达式节点
    */
   walkFunctionExpression(expression) {
-    // 处理默认值
+    // 处理参数列表中的模式
     expression.params.forEach(param => {
       this.walkPattern(param);
     });
 
-    // 
-    // 切换到函数作用域 && 处理参数 && walk函数体
-    //
     this.inScope(
       expression.params,
       function () {
@@ -1426,8 +1461,8 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 逗号表达式 -- 遍历 逗号表达式的子表达式
-   * <expression> , <expression> , ..
+   * 遍历 逗号表达式 -- 遍历 逗号表达式的每个子表达式
+   * <expression> , <expression> , ...
    * 
    * @param {Expression} expression 表达式节点
    */
@@ -1437,7 +1472,7 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 自增/自减表达式 -- 遍历 表达式中的参数
+   * 遍历 自增/自减表达式 -- 遍历 表达式中的参数部分
    * ++<argument>
    * 
    * @param {Expression} expression 表达式节点
@@ -1447,21 +1482,29 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 一元表达式 -- 
+   * 遍历 一元表达式 -- 按不同的运算符分别处理
+   * 
+   * 1. typedef 运算符   满足特定条件时 , 触发"type [name]" , 对表达式进行处理
+   * 2. 其他运算符       遍历 表达式的参数部分
+   * 
    * typedef | delete | - | + | ! | ~ <argument>
+   * 
    * @param {Expression} expression 表达式节点
    */
   walkUnaryExpression(expression) {
-    /**
-     * 如果 是typedef 运算
-     * 那么 
-     */
     if (expression.operator === "typeof") {
       let expr = expression.argument;
       let exprName = [];
 
       /**
-       * 处理对象运算 , 获得最终的标识符
+       * 如果是访问对象成员的表达式 , 记录表达式的所有标志符
+       * 
+       * typedef <MemberExpression>
+       * typedef a.b
+       * 
+       * MemberExpression
+       *  object   : type=Identifier name = a
+       *  property : type=Identifier name = b
        */
       while (
         expr.type === "MemberExpression" &&
@@ -1472,11 +1515,9 @@ class Parser extends Tapable {
       }
 
       /**
-       * 如果
-       *  普通的属性名
-       *  作用域中没有定义该属性
-       * 那么
-       *  emit "typeof "
+       * 如果 expr是标志符 && 没有在作用域中定义
+       * 那么 通过触发事件"typeof [name]" , 处理该表达式
+       *  
        */
       if (expr.type === "Identifier" && this.scope.definitions.indexOf(expr.name) === -1) {
         exprName.unshift(this.scope.renames["$" + expr.name] || expr.name);
@@ -1484,6 +1525,7 @@ class Parser extends Tapable {
 
         const result = this.applyPluginsBailResult1("typeof " + exprName, expression);
 
+        // 有结果 , 无需后序的处理
         if (result === true)
           return;
       }
@@ -1493,7 +1535,8 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 二元表达式 -- 遍历左值部分和右值部分
+   * 遍历 二元表达式 -- 分别遍历左值部分和右值部分
+   * <left> + - * / ... <right>
    * @param {Expression} expression 表达式节点
    */
   walkBinaryExpression(expression) {
@@ -1501,7 +1544,8 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 逻辑表达式 -- 遍历左值部分和右值部分
+   * 遍历 逻辑表达式 -- 分别遍历左值部分和右值部分
+   * <left> && || <right>
    * @param {Expression} expression 表达式节点
    */
   walkLogicalExpression(expression) {
@@ -1509,7 +1553,7 @@ class Parser extends Tapable {
   }
 
   /**
-   * 遍历 用于左值和右值的表达式 -- 
+   * 分别遍历左值部分和右值部分
    * @param {Expression} expression 表达式节点
    */
   walkLeftRightExpression(expression) {
@@ -1715,8 +1759,8 @@ class Parser extends Tapable {
 
   /**
    * 对表达式求值 
-   * 如果 结果是标志符,则 返回别名标志符
-   * 如果 结果不是标志符,则 返回undefined
+   * 如果 结果是标志符   则 返回别名标志符
+   * 如果 结果不是标志符  则 返回undefined
    * 
    * @param {Expression} expr 表达式
    * @returns {String|undefined}
@@ -1733,6 +1777,9 @@ class Parser extends Tapable {
   }
 
   /**
+   * 对表达式进行求值操作, 并返回结果
+   * ( 即通过触发 evaluate [type]事件 , 对指定类型的表达式进行求值操作 )
+   * 
    * 对执行表达式进行求值 , 并返回求值结果
    * @param {Expression} expression 表达式节点
    * @returns {BasicEvaluatedExpression} 
@@ -1751,22 +1798,27 @@ class Parser extends Tapable {
   }
 
   /**
-   * inScope -- 模拟进入作用域操作
+   * 模拟函数执行
+   * 1. 作用域压栈 -- 基于函数参数 , 创建新的函数作用域
+   * 2. 函数fn
+   * 3. 作用域出栈 -- 还原作用域
    * @param {Parttern[]} params 参数列表
    * @param {Function} fn 执行的函数
    */
   inScope(params, fn) {
     const oldScope = this.scope;
 
+    // 
     // 创建新的作用域
+    //
     this.scope = {
       inTry: false,
       inShorthand: false,
-      definitions: oldScope.definitions.slice(),
-      renames: Object.create(oldScope.renames)
+      definitions: oldScope.definitions.slice(),  // 新的定义域
+      renames: Object.create(oldScope.renames)    // 新的重命名映射
     };
 
-    // 遍历参数
+    // 遍历参数列表 , 找出其中的标志符定义
     for (let paramIndex = 0, len = params.length; paramIndex < len; paramIndex++) {
       const param = params[paramIndex];
 
