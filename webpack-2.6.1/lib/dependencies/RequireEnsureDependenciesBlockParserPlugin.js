@@ -9,94 +9,124 @@ const RequireEnsureItemDependency = require("./RequireEnsureItemDependency");
 const getFunctionExpression = require("./getFunctionExpression");
 
 module.exports = class RequireEnsureDependenciesBlockParserPlugin {
-	apply(parser) {
-		parser.plugin("call require.ensure", expr => {
-			let chunkName = null;
-			let chunkNameRange = null;
-			let errorExpressionArg = null;
-			let errorExpression = null;
-			switch(expr.arguments.length) {
-				case 4:
-					{
-						const chunkNameExpr = parser.evaluateExpression(expr.arguments[3]);
-						if(!chunkNameExpr.isString()) return;
-						chunkNameRange = chunkNameExpr.range;
-						chunkName = chunkNameExpr.string;
-					}
-					// falls through
-				case 3:
-					{
-						errorExpressionArg = expr.arguments[2];
-						errorExpression = getFunctionExpression(errorExpressionArg);
+  apply(parser) {
+    parser.plugin("call require.ensure", expr => {
+      let chunkName = null;
+      let chunkNameRange = null;
+      let errorExpressionArg = null;
+      let errorExpression = null;
 
-						if(!errorExpression && !chunkName) {
-							const chunkNameExpr = parser.evaluateExpression(expr.arguments[2]);
-							if(!chunkNameExpr.isString()) return;
-							chunkNameRange = chunkNameExpr.range;
-							chunkName = chunkNameExpr.string;
-						}
-					}
-					// falls through
-				case 2:
-					{
-						const dependenciesExpr = parser.evaluateExpression(expr.arguments[0]);
-						const dependenciesItems = dependenciesExpr.isArray() ? dependenciesExpr.items : [dependenciesExpr];
-						const successExpressionArg = expr.arguments[1];
-						const successExpression = getFunctionExpression(successExpressionArg);
+      switch (expr.arguments.length) {
+        case 4:
+          {
+            const chunkNameExpr = parser.evaluateExpression(expr.arguments[3]);
+            if (!chunkNameExpr.isString()) return;
+            chunkNameRange = chunkNameExpr.range;
+            chunkName = chunkNameExpr.string;
+          }
 
-						if(successExpression) {
-							parser.walkExpressions(successExpression.expressions);
-						}
-						if(errorExpression) {
-							parser.walkExpressions(errorExpression.expressions);
-						}
+        // falls through
+        case 3:
+          {
+            errorExpressionArg = expr.arguments[2];
+            errorExpression = getFunctionExpression(errorExpressionArg);
 
-						const dep = new RequireEnsureDependenciesBlock(expr,
-							successExpression ? successExpression.fn : successExpressionArg,
-							errorExpression ? errorExpression.fn : errorExpressionArg,
-							chunkName, chunkNameRange, parser.state.module, expr.loc);
-						const old = parser.state.current;
-						parser.state.current = dep;
-						try {
-							let failed = false;
-							parser.inScope([], () => {
-								dependenciesItems.forEach(ee => {
-									if(ee.isString()) {
-										const edep = new RequireEnsureItemDependency(ee.string, ee.range);
-										edep.loc = dep.loc;
-										dep.addDependency(edep);
-									} else {
-										failed = true;
-									}
-								});
-							});
-							if(failed) {
-								return;
-							}
-							if(successExpression) {
-								if(successExpression.fn.body.type === "BlockStatement")
-									parser.walkStatement(successExpression.fn.body);
-								else
-									parser.walkExpression(successExpression.fn.body);
-							}
-							old.addBlock(dep);
-						} finally {
-							parser.state.current = old;
-						}
-						if(!successExpression) {
-							parser.walkExpression(successExpressionArg);
-						}
-						if(errorExpression) {
-							if(errorExpression.fn.body.type === "BlockStatement")
-								parser.walkStatement(errorExpression.fn.body);
-							else
-								parser.walkExpression(errorExpression.fn.body);
-						} else if(errorExpressionArg) {
-							parser.walkExpression(errorExpressionArg);
-						}
-						return true;
-					}
-			}
-		});
-	}
+            if (!errorExpression && !chunkName) {
+              const chunkNameExpr = parser.evaluateExpression(expr.arguments[2]);
+              if (!chunkNameExpr.isString()) return;
+              chunkNameRange = chunkNameExpr.range;
+              chunkName = chunkNameExpr.string;
+            }
+          }
+
+        // falls through
+        case 2:
+          {
+            const dependenciesExpr = parser.evaluateExpression(expr.arguments[0]);
+            const dependenciesItems = dependenciesExpr.isArray() ? dependenciesExpr.items : [dependenciesExpr];
+            const successExpressionArg = expr.arguments[1];
+            const successExpression = getFunctionExpression(successExpressionArg);
+
+            if (successExpression) {
+              parser.walkExpressions(successExpression.expressions);
+            }
+
+            if (errorExpression) {
+              parser.walkExpressions(errorExpression.expressions);
+            }
+
+            // 创建异步块
+            const dep = new RequireEnsureDependenciesBlock(
+              expr,
+              successExpression ? successExpression.fn : successExpressionArg,
+              errorExpression ? errorExpression.fn : errorExpressionArg,
+              chunkName,
+              chunkNameRange,
+              parser.state.module,
+              expr.loc
+            );
+
+            /**
+             * 切换current
+             */
+            const old = parser.state.current;
+            parser.state.current = dep;
+
+            try {
+              let failed = false;
+
+              // 生成异步块的依赖
+              parser.inScope([], () => {
+                dependenciesItems.forEach(ee => {
+                  if (ee.isString()) {
+                    const edep = new RequireEnsureItemDependency(ee.string, ee.range);
+                    edep.loc = dep.loc;
+                    dep.addDependency(edep);
+                  } else {
+                    failed = true;
+                  }
+                });
+              });
+
+              if (failed) {
+                return;
+              }
+
+              /**
+               * 收集成功回调函数中的模块依赖
+               */
+              if (successExpression) {
+                if (successExpression.fn.body.type === "BlockStatement")
+                  parser.walkStatement(successExpression.fn.body);
+                else
+                  parser.walkExpression(successExpression.fn.body);
+              }
+
+              old.addBlock(dep);
+            } finally {
+              parser.state.current = old;
+            }
+
+            if (!successExpression) {
+              parser.walkExpression(successExpressionArg);
+            }
+
+            /**
+             * 处理 错误回调函数
+             * 1. 收集异常时引用的模块
+             */
+            if (errorExpression) {
+              if (errorExpression.fn.body.type === "BlockStatement")
+                parser.walkStatement(errorExpression.fn.body);
+              else
+                parser.walkExpression(errorExpression.fn.body);
+            } else if (errorExpressionArg) {
+              parser.walkExpression(errorExpressionArg);
+            }
+
+            return true;
+          }
+      }
+    });
+  }
 };

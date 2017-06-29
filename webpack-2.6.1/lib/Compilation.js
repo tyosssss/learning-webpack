@@ -1222,6 +1222,8 @@ class Compilation extends Tapable {
       if (!d.module) {
         return;
       }
+
+      // 是否是弱引用. 如果是弱引用 , 那么构建块时 , 将不会包含模块的具体内容
       if (d.weak) {
         return;
       }

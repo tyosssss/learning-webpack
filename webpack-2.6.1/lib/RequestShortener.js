@@ -36,19 +36,34 @@ class RequestShortener {
 		this.indexJsRegExp = /\/index.js(!|\?|\(query\))/g;
 	}
 
+  /**
+   * 简写请求路径
+   * 
+   * @param {String} request 请求路径
+   * @returns {String} 返回简写之后的请求路径
+   * @memberof RequestShortener
+   */
 	shorten(request) {
 		if(!request) return request;
+
 		request = request.replace(/\\/g, "/");
-		if(this.buildinsAsModule && this.buildinsRegExp)
+		
+    if(this.buildinsAsModule && this.buildinsRegExp)
 			request = request.replace(this.buildinsRegExp, "!(webpack)");
+
 		if(this.currentDirectoryRegExp)
 			request = request.replace(this.currentDirectoryRegExp, "!.");
+
 		if(this.parentDirectoryRegExp)
 			request = request.replace(this.parentDirectoryRegExp, "!..");
+
 		if(!this.buildinsAsModule && this.buildinsRegExp)
 			request = request.replace(this.buildinsRegExp, "!(webpack)");
+
 		request = request.replace(this.nodeModulesRegExp, "/~/");
+    
 		request = request.replace(this.indexJsRegExp, "$1");
+    
 		return request.replace(/^!|!$/, "");
 	}
 }

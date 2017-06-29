@@ -14,9 +14,10 @@ const BasicEvaluatedExpression = require("./BasicEvaluatedExpression");
  * 解析器状态
  * @typedef {Object} ParserState
  * @proprety {Compilation} compilation 编译实例
- * @property {Module} current
- * @property {Module} module
+ * @property {Module|Dependency} current 正在使用的模块和依赖 ( 发现的模块和依赖会添加到current中 )
+ * @property {Module} module 模块
  * @property {Object} options webpack的所有配置
+ * @property {} localModules
  */
 
 /**
@@ -486,29 +487,50 @@ class Parser extends Tapable {
     });
 
     /**
-     * 对"标志符"进行求值 , 返回求值结果
+     * 对"三元表达式"进行求值 , 返回求值结果
      */
     this.plugin("evaluate ConditionalExpression", function (expr) {
+      // 对条件进行求值
       const condition = this.evaluateExpression(expr.test);
       const conditionValue = condition.asBool();
       let res;
+
+      /**
+       * 根据条件值 , 进行后续操作
+       * 1. 条件值 不是 bool
+       * 
+       * 
+       * 2. 条件值 是 bool , 根据布尔值执行相应的语句部分 
+       */
       if (conditionValue === undefined) {
-        const consequent = this.evaluateExpression(expr.consequent);
-        const alternate = this.evaluateExpression(expr.alternate);
-        if (!consequent || !alternate) return;
+        const consequent = this.evaluateExpression(expr.consequent);  // true  语句
+        const alternate = this.evaluateExpression(expr.alternate);    // false 语句
+
+        if (!consequent || !alternate) {
+          return;
+        }
+
         res = new BasicEvaluatedExpression();
-        if (consequent.isConditional())
-          res.setOptions(consequent.options);
-        else
-          res.setOptions([consequent]);
-        if (alternate.isConditional())
-          res.addOptions(alternate.options);
-        else
-          res.addOptions([alternate]);
+
+        // 
+        consequent.isConditional()
+          ? res.setOptions(consequent.options)
+          : res.setOptions([consequent]);
+
+        //
+        alternate.isConditional()
+          ? res.addOptions(alternate.options)
+          : res.addOptions([alternate])
       } else {
-        res = this.evaluateExpression(conditionValue ? expr.consequent : expr.alternate);
+        res = this.evaluateExpression(
+          conditionValue
+            ? expr.consequent
+            : expr.alternate
+        );
       }
+
       res.setRange(expr.range);
+
       return res;
     });
 

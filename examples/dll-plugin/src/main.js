@@ -1,12 +1,13 @@
-/**
- * 
- */
-var a = b;
-// var c = require('./1.js')
+// var a = b;
 
-var d = require
-
-console.log(d)
+require.ensure(['./1.js'],
+  function(require){
+    // require("./1.js")
+    require("./2.js")
+  },
+  function(err){
+  },
+  'a' + 'a')
 
 // let path = require('../../test-loader?type=inner!./2.js')
 

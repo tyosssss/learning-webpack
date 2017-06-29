@@ -19,7 +19,7 @@ const CommonJsRequireDependencyParserPlugin = require("./CommonJsRequireDependen
 const ParserHelpers = require("../ParserHelpers");
 
 /**
- * 处理 CommonJS 相关的 API
+ * 解析 CommonJS规范 "require , require.resolve , require.resolveWeak" 的插件
  * 
  * @class CommonJsPlugin
  */
@@ -98,9 +98,9 @@ class CommonJsPlugin {
           
           return true;
         });
-        
+
         parser.plugin("can-rename require", () => true);
-        
+
         parser.plugin("rename require", (expr) => {
           // define the require variable. It's still undefined, but not "not defined".
           const dep = new ConstDependency("var require;", 0);
@@ -110,9 +110,9 @@ class CommonJsPlugin {
         });
 
         parser.plugin("typeof module", () => true);
-        
+
         parser.plugin("evaluate typeof exports", ParserHelpers.evaluateToString("object"));
-        
+
         parser.apply(
           new CommonJsRequireDependencyParserPlugin(options),
           new RequireResolveDependencyParserPlugin(options)

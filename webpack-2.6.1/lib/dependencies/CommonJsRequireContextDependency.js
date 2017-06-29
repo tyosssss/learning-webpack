@@ -7,26 +7,42 @@ const ContextDependency = require("./ContextDependency");
 const CriticalDependencyWarning = require("./CriticalDependencyWarning");
 const ContextDependencyTemplateAsRequireCall = require("./ContextDependencyTemplateAsRequireCall");
 
+/**
+ * 
+ * 
+ * @class CommonJsRequireContextDependency
+ * @extends {ContextDependency}
+ */
 class CommonJsRequireContextDependency extends ContextDependency {
-	constructor(request, recursive, regExp, range, valueRange) {
-		super(request, recursive, regExp);
-		this.range = range;
-		this.valueRange = valueRange;
-	}
 
-	get type() {
-		return "cjs require context";
-	}
+  /**
+   * Creates an instance of CommonJsRequireContextDependency.
+   * @param {Boolean} request 
+   * @param {Boolean} recursive 
+   * @param {RegExp} regExp 
+   * @param {Tuple<start,end>} range 
+   * @param {any} valueRange 
+   * @memberof CommonJsRequireContextDependency
+   */
+  constructor(request, recursive, regExp, range, valueRange) {
+    super(request, recursive, regExp);
+    this.range = range;
+    this.valueRange = valueRange;
+  }
 
-	getWarnings() {
-		if(!this.critical) {
-			return;
-		}
+  get type() {
+    return "cjs require context";
+  }
 
-		return [
-			new CriticalDependencyWarning(this.critical)
-		];
-	}
+  getWarnings() {
+    if (!this.critical) {
+      return;
+    }
+
+    return [
+      new CriticalDependencyWarning(this.critical)
+    ];
+  }
 }
 
 CommonJsRequireContextDependency.Template = ContextDependencyTemplateAsRequireCall;
