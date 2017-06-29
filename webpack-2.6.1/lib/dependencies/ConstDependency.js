@@ -12,12 +12,19 @@ class ConstDependency extends NullDependency {
 		this.range = range;
 	}
 
+	/**
+	 * 设置用于计算hash的原始值 
+	 * @param {crypto.Hash} hash 
+	 */
 	updateHash(hash) {
 		hash.update(this.range + "");
 		hash.update(this.expression + "");
 	}
 }
 
+/**
+ * ConstDependencyTemplate
+ */
 ConstDependency.Template = class ConstDependencyTemplate {
 	apply(dep, source) {
 		if(typeof dep.range === "number") {

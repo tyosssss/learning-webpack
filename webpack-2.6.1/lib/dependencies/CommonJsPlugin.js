@@ -68,18 +68,34 @@ class CommonJsPlugin {
 
         const requireExpressions = ["require", "require.resolve", "require.resolveWeak"];
         
+        /**
+         * 劫持 求值 typedef require , require.resolve , require.resolveWeak
+         * 返回 "function"
+         */
         for (let expression of requireExpressions) {
           parser.plugin(`typeof ${expression}`, ParserHelpers.toConstantDependency("function"));
           parser.plugin(`evaluate typeof ${expression}`, ParserHelpers.evaluateToString("function"));
         }
 
+        /**
+         * 劫持 求值 typedef module
+         * 返回 "object"
+         */
         parser.plugin("evaluate typeof module", ParserHelpers.evaluateToString("object"));
+        
+        /**
+         * 劫持 求值 ... = require
+         * 1. 在作用域中添加 "require" 
+         * 2. 添加常量模块 , 用于替换var require
+         */
         parser.plugin("assign require", (expr) => {
           // to not leak to global "require", we need to define a local require here.
           const dep = new ConstDependency("var require;", 0);
           dep.loc = expr.loc;
+          
           parser.state.current.addDependency(dep);
           parser.scope.definitions.push("require");
+          
           return true;
         });
         

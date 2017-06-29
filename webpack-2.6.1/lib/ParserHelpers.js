@@ -11,6 +11,9 @@ const UnsupportedFeatureWarning = require("./UnsupportedFeatureWarning");
 
 const ParserHelpers = exports;
 
+/**
+ * 
+ */
 ParserHelpers.addParsedVariableToModule = function (parser, name, expression) {
   if (!parser.state.current.addVariable) return false;
   var deps = [];
@@ -27,7 +30,9 @@ ParserHelpers.addParsedVariableToModule = function (parser, name, expression) {
   return true;
 };
 
-
+/**
+ * 
+ */
 ParserHelpers.requireFileAsExpression = function (context, pathToModule) {
   var moduleJsPath = path.relative(context, pathToModule);
   if (!/^[A-Z]:/i.test(moduleJsPath)) {
@@ -37,14 +42,21 @@ ParserHelpers.requireFileAsExpression = function (context, pathToModule) {
 };
 
 /**
- * 
- * @param {String} value
- * @returns {Boolean} 返回true , 表示后续插件fn无需执行
+ * 返回一个 "将指定值转换为ConstDependecy , 同时将依赖添加到当前Module中" 的事件处理器
+ * @param {String} value 常量值
+ * @returns {Function} 返回处理器
  */
 ParserHelpers.toConstantDependency = function (value) {
+  /**
+   * 
+   * @param {Expression} expr 表达式
+   * @returns {Boolean} true , 表示无需触发后序的事件处理器
+   * @this Parser
+   */
   return function constDependency(expr) {
     var dep = new ConstDependency(value, expr.range);
     dep.loc = expr.loc;
+
     this.state.current.addDependency(dep);
 
     return true;
@@ -52,13 +64,15 @@ ParserHelpers.toConstantDependency = function (value) {
 };
 
 /**
- * 
- * @param {String} value
- * @returns {Boolean}
+ * 返回一个 "将求得的值转换为指定字符串value" 的事件处理器
+ * @param {String} value 字符串
+ * @returns {Function} 返回处理器
  */
 ParserHelpers.evaluateToString = function (value) {
   return function stringExpression(expr) {
-    return new BasicEvaluatedExpression().setString(value).setRange(expr.range);
+    return new BasicEvaluatedExpression()
+      .setString(value)
+      .setRange(expr.range);
   };
 };
 
