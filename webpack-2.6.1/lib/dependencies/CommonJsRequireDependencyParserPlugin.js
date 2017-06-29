@@ -14,7 +14,7 @@ const ParserHelpers = require("../ParserHelpers");
 
 /**
  * 
- * 
+ * CommonJS require依赖 ( "require" 语句 ) 解析器插件
  * 
  * @class CommonJsRequireDependencyParserPlugin
  */
@@ -25,37 +25,77 @@ class CommonJsRequireDependencyParserPlugin {
 
   apply(parser) {
     const options = this.options;
+
+    /**
+     * 处理遇到的"require.cache"表达式时 
+     */
     parser.plugin("expression require.cache", ParserHelpers.toConstantDependency("__webpack_require__.c"));
+
+    /**
+     * 处理遇到的"require"表达式
+     */
     parser.plugin("expression require", (expr) => {
-      const dep = new CommonJsRequireContextDependency(options.unknownContextRequest, options.unknownContextRecursive, options.unknownContextRegExp, expr.range);
-      dep.critical = options.unknownContextCritical && "require function is used in a way in which dependencies cannot be statically extracted";
+      const dep = new CommonJsRequireContextDependency(
+        options.unknownContextRequest,
+        options.unknownContextRecursive,
+        options.unknownContextRegExp,
+        expr.range
+      );
+
+      dep.critical = options.unknownContextCritical &&
+        "require function is used in a way in which dependencies cannot be statically extracted";
+
       dep.loc = expr.loc;
+
       dep.optional = !!parser.scope.inTry;
+
       parser.state.current.addDependency(dep);
+
       return true;
     });
+
+    /**
+     * 处理 调用"require"
+     */
     parser.plugin("call require", (expr) => {
+      //
+      // 多个参数不处理
+      //
       if (expr.arguments.length !== 1) return;
+
       let localModule;
+
+      // 执行 "参数1"表达式 , 获得表达式结果
       const param = parser.evaluateExpression(expr.arguments[0]);
+
+      /**
+       * 
+       */
       if (param.isConditional()) {
         let isExpression = false;
         const prevLength = parser.state.current.dependencies.length;
         const dep = new RequireHeaderDependency(expr.callee.range);
+
         dep.loc = expr.loc;
         parser.state.current.addDependency(dep);
+
         param.options.forEach(function (param) {
           const result = parser.applyPluginsBailResult("call require:commonjs:item", expr, param);
           if (result === undefined) {
             isExpression = true;
           }
         });
+
         if (isExpression) {
           parser.state.current.dependencies.length = prevLength;
         } else {
           return true;
         }
       }
+
+      /**
+       * 处理 "字符串" 参数
+       */
       if (param.isString() && (localModule = LocalModulesHelpers.getLocalModule(parser.state, param.string))) {
         const dep = new LocalModuleDependency(localModule, expr.range);
         dep.loc = expr.loc;
@@ -63,6 +103,7 @@ class CommonJsRequireDependencyParserPlugin {
         return true;
       } else {
         const result = parser.applyPluginsBailResult("call require:commonjs:item", expr, param);
+
         if (result === undefined) {
           parser.applyPluginsBailResult("call require:commonjs:context", expr, param);
         } else {
@@ -70,24 +111,36 @@ class CommonJsRequireDependencyParserPlugin {
           dep.loc = expr.loc;
           parser.state.current.addDependency(dep);
         }
+
         return true;
       }
     });
+
+    /**
+     * 处理 require:CommonJS 模块请求 -- 向模块添加CommonJsRequireDependency依赖
+     */
     parser.plugin("call require:commonjs:item", (expr, param) => {
       if (param.isString()) {
         const dep = new CommonJsRequireDependency(param.string, param.range);
         dep.loc = expr.loc;
         dep.optional = !!parser.scope.inTry;
         parser.state.current.addDependency(dep);
+
         return true;
       }
     });
+
+    /**
+     * 处理 require:CommonJS 上下文请求 -- 向模块添加CommonJsRequireDependency依赖
+     */
     parser.plugin("call require:commonjs:context", (expr, param) => {
       const dep = ContextDependencyHelpers.create(CommonJsRequireContextDependency, expr.range, param, expr, options);
+
       if (!dep) return;
       dep.loc = expr.loc;
       dep.optional = !!parser.scope.inTry;
       parser.state.current.addDependency(dep);
+
       return true;
     });
   }

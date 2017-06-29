@@ -13,28 +13,33 @@ const RequireEnsureDependenciesBlockParserPlugin = require("./RequireEnsureDepen
 
 const ParserHelpers = require("../ParserHelpers");
 
+/**
+ * 解析 "require.ensure" 语句的插件
+ * 
+ * @class RequireEnsurePlugin
+ */
 class RequireEnsurePlugin {
 
-	apply(compiler) {
-		compiler.plugin("compilation", (compilation, params) => {
-			const normalModuleFactory = params.normalModuleFactory;
+  apply(compiler) {
+    compiler.plugin("compilation", (compilation, params) => {
+      const normalModuleFactory = params.normalModuleFactory;
 
-			compilation.dependencyFactories.set(RequireEnsureItemDependency, normalModuleFactory);
-			compilation.dependencyTemplates.set(RequireEnsureItemDependency, new RequireEnsureItemDependency.Template());
+      compilation.dependencyFactories.set(RequireEnsureItemDependency, normalModuleFactory);
+      compilation.dependencyTemplates.set(RequireEnsureItemDependency, new RequireEnsureItemDependency.Template());
 
-			compilation.dependencyFactories.set(RequireEnsureDependency, new NullFactory());
-			compilation.dependencyTemplates.set(RequireEnsureDependency, new RequireEnsureDependency.Template());
+      compilation.dependencyFactories.set(RequireEnsureDependency, new NullFactory());
+      compilation.dependencyTemplates.set(RequireEnsureDependency, new RequireEnsureDependency.Template());
 
-			params.normalModuleFactory.plugin("parser", (parser, parserOptions) => {
+      params.normalModuleFactory.plugin("parser", (parser, parserOptions) => {
 
-				if(typeof parserOptions.requireEnsure !== "undefined" && !parserOptions.requireEnsure)
-					return;
+        if (typeof parserOptions.requireEnsure !== "undefined" && !parserOptions.requireEnsure)
+          return;
 
-				parser.apply(new RequireEnsureDependenciesBlockParserPlugin());
-				parser.plugin("evaluate typeof require.ensure", ParserHelpers.evaluateToString("function"));
-				parser.plugin("typeof require.ensure", ParserHelpers.toConstantDependency(JSON.stringify("function")));
-			});
-		});
-	}
+        parser.apply(new RequireEnsureDependenciesBlockParserPlugin());
+        parser.plugin("evaluate typeof require.ensure", ParserHelpers.evaluateToString("function"));
+        parser.plugin("typeof require.ensure", ParserHelpers.toConstantDependency(JSON.stringify("function")));
+      });
+    });
+  }
 }
 module.exports = RequireEnsurePlugin;
