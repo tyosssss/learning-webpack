@@ -67,30 +67,49 @@ function iterationOfArrayCallback(arr, fn) {
   }
 }
 
+/**
+ * 表示一次编译的实例
+ * 
+ * @class Compilation
+ * @extends {Tapable}
+ */
 class Compilation extends Tapable {
   constructor(compiler) {
     super();
+
+    /**
+     * 
+     */
     this.compiler = compiler;
+    
+    /**
+     * 解析器
+     * @type {Object}
+     */
     this.resolvers = compiler.resolvers;
+    
+    /**
+     * 文件系
+     * @type {FileSystem}
+     */
     this.inputFileSystem = compiler.inputFileSystem;
 
+    /**
+     * 初始化配置项
+     */
     const options = this.options = compiler.options;
     this.outputOptions = options && options.output;
     this.bail = options && options.bail;
     this.profile = options && options.profile;
     this.performance = options && options.performance;
 
-    //
-    // 创建模板实例
-    //
+    /**
+     * 创建模板的实例
+     */
     this.mainTemplate = new MainTemplate(this.outputOptions);
     this.chunkTemplate = new ChunkTemplate(this.outputOptions);
     this.hotUpdateChunkTemplate = new HotUpdateChunkTemplate(this.outputOptions);
     this.moduleTemplate = new ModuleTemplate(this.outputOptions);
-
-    //
-    // 初始化属性
-    //
 
 		/**
 		 * 存储所有的入口模块
@@ -104,15 +123,54 @@ class Compilation extends Tapable {
 		 */
     this.preparedChunks = [];
 
+    /**
+     * 
+     */
     this.entrypoints = {};
+
+    /**
+     * @type {Chunk[]}
+     */
     this.chunks = [];
+
+    /**
+     * @type {Chunk[]}
+     */
     this.namedChunks = {};
+
+    /**
+     * 
+     */
     this.modules = [];
+
+    /**
+     * 
+     */
     this._modules = {};
+
+    /**
+     * 
+     */
     this.cache = null;
+
+    /**
+     * 
+     */
     this.records = null;
+
+    /**
+     * 
+     */
     this.nextFreeModuleIndex = undefined;
+
+    /**
+     * 
+     */
     this.nextFreeModuleIndex2 = undefined;
+
+    /**
+     * 
+     */
     this.additionalChunkAssets = [];
 
     /**
@@ -137,20 +195,20 @@ class Compilation extends Tapable {
     this.children = [];
 
 		/**
-		 * 存储模块工厂与依赖类型的对应关系 
+		 * 存储模块工厂与依赖的对应关系 ( 实现依赖注入 )
 		 * @type {Map<Dependency,ModuleFactory>}
 		 */
     this.dependencyFactories = new Map();
 
 		/**
-		 * 
-		 * @type {Map}
+		 * 存储 模板与依赖的对应关系 ( 实现依赖注入 )
+		 * @type {Map<Dependency,Template>}
 		 */
     this.dependencyTemplates = new Map();
   }
 
 	/**
-	 * 添加入口
+	 * 添加入口依赖
 	 * @param {String} context 上下文路径
 	 * @param {Dependency} entry 入口模块依赖
 	 * @param {String} name 入口的名称

@@ -12,10 +12,13 @@ const UnsupportedFeatureWarning = require("./UnsupportedFeatureWarning");
 const ParserHelpers = exports;
 
 /**
- * 
+ * @param {Parser} parser
+ * @param {String} name
+ * @param {Expression} expression
  */
 ParserHelpers.addParsedVariableToModule = function (parser, name, expression) {
   if (!parser.state.current.addVariable) return false;
+  
   var deps = [];
   parser.parse(expression, {
     current: {
@@ -26,7 +29,9 @@ ParserHelpers.addParsedVariableToModule = function (parser, name, expression) {
     },
     module: parser.state.module
   });
+  
   parser.state.current.addVariable(name, expression, deps);
+  
   return true;
 };
 
@@ -77,7 +82,7 @@ ParserHelpers.evaluateToString = function (value) {
 };
 
 /**
- * 
+ * 返回一个 "将求得的值转换为布尔"的事件处理器
  * @param {String} value
  * @returns {Boolean}
  */
