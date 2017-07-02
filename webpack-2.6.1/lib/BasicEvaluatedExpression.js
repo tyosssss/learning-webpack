@@ -72,6 +72,10 @@ class BasicEvaluatedExpression {
 
   /**
    * 将表达式的求值结果转换为bool类型
+   * 
+   * 返回undefined :
+   *  -- 
+   * 
    * @returns {Boolean|undefined} 返回最终的布尔类型
    */
   asBool() {
@@ -82,7 +86,18 @@ class BasicEvaluatedExpression {
     else if (this.isRegExp()) return true;
     else if (this.isArray()) return true;
     else if (this.isConstArray()) return true;
-    else if (this.isWrapped()) return this.prefix && this.prefix.asBool() || this.postfix && this.postfix.asBool() ? true : undefined;
+    else if (this.isWrapped()) {
+      return (
+        (
+          this.prefix && 
+          this.prefix.asBool()
+        ) || 
+        (
+          this.postfix && 
+          this.postfix.asBool() ? true : undefined
+        )
+      );
+    }
     else if (this.isTemplateString()) {
       if (this.quasis.length === 1) return this.quasis[0].asBool();
       for (let i = 0; i < this.quasis.length; i++) {
@@ -95,7 +110,7 @@ class BasicEvaluatedExpression {
   }
 
 	/**
-	 * 
+	 * 设置 结果为字符串
 	 * @param {String} str 
 	 */
   setString(str) {
@@ -106,13 +121,16 @@ class BasicEvaluatedExpression {
     return this;
   }
 
+  /**
+   * 设置 结果为null
+   */
   setNull() {
     this.null = true;
     return this;
   }
 
 	/**
-	 * 
+	 * 设置 结果为数字值
 	 * @param {Number} num 
 	 */
   setNumber(num) {
@@ -120,9 +138,14 @@ class BasicEvaluatedExpression {
       delete this.number;
     else
       this.number = num;
+
     return this;
   }
 
+  /**
+   * 设置 布尔值
+   * @param {Boolean} bool 
+   */
   setBoolean(bool) {
     if (bool === null)
       delete this.bool;
@@ -131,6 +154,10 @@ class BasicEvaluatedExpression {
     return this;
   }
 
+  /**
+   * 设置 正则表达式
+   * @param {RegExp} bool 
+   */
   setRegExp(regExp) {
     if (regExp === null)
       delete this.regExp;
@@ -186,6 +213,10 @@ class BasicEvaluatedExpression {
     return this;
   }
 
+  /**
+   * 设置 数组元素
+   * @param {Array} items 
+   */
   setItems(items) {
     if (items === null)
       delete this.items;
@@ -193,7 +224,11 @@ class BasicEvaluatedExpression {
       this.items = items;
     return this;
   }
-
+  
+  /**
+   * 设置数组
+   * @param {Array} array 
+   */
   setArray(array) {
     if (array === null)
       delete this.array;
@@ -219,7 +254,12 @@ class BasicEvaluatedExpression {
   }
 
 	/**
-	 * 设置 表达式求值结果对应的代码范围 ( 即表示那段代码的求值结果 )
+	 * 设置 表达式求值的结果所对应的代码范围 ( 即表示那段代码的求值结果 )
+   * 
+   * // 对以下表达式求值
+   * // 那么 range 的范围应该是 [5,6] // ==> a
+   * var a = 1;
+   * 
 	 * @param {Tuple[start,end]} range 
 	 */
   setRange(range) {

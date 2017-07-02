@@ -27,30 +27,30 @@ module.exports = {
   //   }
   // },
 
-  module: {
-    rules: [
-      {
-        enforce: 'pre',
-        loader: '../../test-loader',
-        options: {
-          type: '---pre---',
-        }
-      },
-      {
-        loader: '../../test-loader',
-        options: {
-          type: '---normal---',
-        }
-      },
-      {
-        enforce: 'post',
-        loader: '../../test-loader',
-        options: {
-          type: '---post---',
-        }
-      }
-    ]
-  },
+  // module: {
+  //   rules: [
+  //     {
+  //       enforce: 'pre',
+  //       loader: '../../test-loader',
+  //       options: {
+  //         type: '---pre---',
+  //       }
+  //     },
+  //     {
+  //       loader: '../../test-loader',
+  //       options: {
+  //         type: '---normal---',
+  //       }
+  //     },
+  //     {
+  //       enforce: 'post',
+  //       loader: '../../test-loader',
+  //       options: {
+  //         type: '---post---',
+  //       }
+  //     }
+  //   ]
+  // },
 
   plugins: [
     // new CleanWebpackPlugin(['build'], {
@@ -60,19 +60,19 @@ module.exports = {
     //   //exclude: ["dist/1.chunk.js"]
     // }),
 
-    new webpack.DllReferencePlugin({
-      context: __dirname,
+    // new webpack.DllReferencePlugin({
+    //   context: __dirname,
 
-      scope: "ccc",
+    //   scope: "ccc",
 
-      name: 'crocodile_library',
-      // sourceType: 'commonjs2',
+    //   name: 'crocodile_library',
+    //   // sourceType: 'commonjs2',
 
-      /**
-       * 在这里引入 manifest 文件
-       */
-      manifest: require(path.resolve(path.join(__dirname, './dll/crocodile.manifest.json')))
-    }),
+    //   /**
+    //    * 在这里引入 manifest 文件
+    //    */
+    //   manifest: require(path.resolve(path.join(__dirname, './dll/crocodile.manifest.json')))
+    // }),
 
     /**
      * 提取策略 : 

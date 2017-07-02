@@ -3,6 +3,8 @@ const webpack = require('./webpack-2.6.1/lib/webpack')
 const configPath = process.argv[2]
 const config = require(resolve(configPath))
 
+console.log(config)
+
 webpack(config, function (err) {
   if (err) {
     console.log('error', err)

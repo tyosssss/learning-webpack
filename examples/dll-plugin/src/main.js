@@ -1,4 +1,12 @@
 // var a = b;
+var a = 2;
+
+if(require === 1){
+  // return 1
+  b = 123
+}else{
+  b= 23
+}
 
 require.ensure(['./1.js'],
   function(require){
