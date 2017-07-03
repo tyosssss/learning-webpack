@@ -31,36 +31,18 @@ Template.REGEXP_FILE = REGEXP_FILE;
 Template.REGEXP_QUERY = REGEXP_QUERY;
 Template.REGEXP_FILEBASE = REGEXP_FILEBASE;
 
-const withHashLength = (replacer, handlerFn) => {
-  return function (_, hashLength) {
-    const length = hashLength && parseInt(hashLength, 10);
-    if (length && handlerFn) {
-      return handlerFn(length);
-    }
-    const hash = replacer.apply(this, arguments);
-    return length ? hash.slice(0, length) : hash;
-  };
-};
 
-const getReplacer = (value, allowEmpty) => {
-  return function (match) {
-    // last argument in replacer is the entire input string
-    const input = arguments[arguments.length - 1];
-    if (value === null || value === undefined) {
-      if (!allowEmpty) throw new Error(`Path variable ${match} not implemented in this context: ${input}`);
-      return "";
-    } else {
-      return `${value}`;
-    }
-  };
-};
-
+/**
+ * 替换路径中的变量
+ * @param {String} path 
+ * @param {Object} data 
+ */
 const replacePathVariables = (path, data) => {
-  const chunk = data.chunk;
-  const chunkId = chunk && chunk.id;
-  const chunkName = chunk && (chunk.name || chunk.id);
-  const chunkHash = chunk && (chunk.renderedHash || chunk.hash);
-  const chunkHashWithLength = chunk && chunk.hashWithLength;
+  const chunk = data.chunk;                                       // 块
+  const chunkId = chunk && chunk.id;                              // 块的Id
+  const chunkName = chunk && (chunk.name || chunk.id);            // 块的名称
+  const chunkHash = chunk && (chunk.renderedHash || chunk.hash);  // 块的hash
+  const chunkHashWithLength = chunk && chunk.hashWithLength;      // 块的hash
 
   if (data.noChunkHash && REGEXP_CHUNKHASH_FOR_TEST.test(path)) {
     throw new Error(`Cannot use [chunkhash] for chunk in '${path}' (use [hash] instead)`);
@@ -75,6 +57,48 @@ const replacePathVariables = (path, data) => {
     .replace(REGEXP_FILEBASE, getReplacer(data.basename))
     // query is optional, it's OK if it's in a path but there's nothing to replace it with
     .replace(REGEXP_QUERY, getReplacer(data.query, true));
+};
+
+
+/**
+ * 截取指定长度的hash值
+ * @param {*} replacer 
+ * @param {Function} handlerFn 
+ * @returns {Function}
+ */
+const withHashLength = (replacer, handlerFn) => {
+  return function (_, hashLength) {
+    const length = hashLength && parseInt(hashLength, 10);
+    if (length && handlerFn) {
+      return handlerFn(length);
+    }
+
+    const hash = replacer.apply(this, arguments);
+
+    return length
+      ? hash.slice(0, length)
+      : hash;
+  };
+};
+
+/**
+ * 获得替换器
+ * @param {String} value 
+ * @param {Boolean} allowEmpty 
+ * @returns {Function} 返回替换器
+ */
+const getReplacer = (value, allowEmpty) => {
+  return function (match) {
+    // last argument in replacer is the entire input string
+    const input = arguments[arguments.length - 1];
+
+    if (value === null || value === undefined) {
+      if (!allowEmpty) throw new Error(`Path variable ${match} not implemented in this context: ${input}`);
+      return "";
+    } else {
+      return `${value}`;
+    }
+  };
 };
 
 /**
@@ -94,6 +118,7 @@ class TemplatedPathPlugin {
         const publicPath = outputOptions.publicPath || "";
         const filename = outputOptions.filename || "";
         const chunkFilename = outputOptions.chunkFilename || outputOptions.filename;
+        
         if (REGEXP_HASH_FOR_TEST.test(publicPath) || REGEXP_CHUNKHASH_FOR_TEST.test(publicPath) || REGEXP_NAME_FOR_TEST.test(publicPath))
           return true;
         if (REGEXP_HASH_FOR_TEST.test(filename))

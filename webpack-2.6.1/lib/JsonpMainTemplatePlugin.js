@@ -172,10 +172,12 @@ this[${JSON.stringify(hotUpdateFunction)}] = ${runtimeSource}`;
             hash: `" + ${JSON.stringify(chunkMaps.hash)}[chunkId] + "`,
             hashWithLength(length) {
               const shortChunkHashMap = Object.create(null);
+
               Object.keys(chunkMaps.hash).forEach(chunkId => {
                 if (typeof chunkMaps.hash[chunkId] === "string")
                   shortChunkHashMap[chunkId] = chunkMaps.hash[chunkId].substr(0, length);
               });
+              
               return `" + ${JSON.stringify(shortChunkHashMap)}[chunkId] + "`;
             },
             name: `" + (${JSON.stringify(chunkMaps.name)}[chunkId]||chunkId) + "`

@@ -274,6 +274,7 @@ module.exports = class MainTemplate extends Template {
    */
   renderCurrentHashCode(hash, length) {
     length = length || Infinity;
+    
     return this.applyPluginsWaterfall("current-hash", JSON.stringify(hash.substr(0, length)), length);
   }
 

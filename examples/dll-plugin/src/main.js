@@ -8,14 +8,16 @@ if(require === 1){
   b= 23
 }
 
-require.ensure(['./1.js'],
-  function(require){
-    // require("./1.js")
-    require("./2.js")
-  },
-  function(err){
-  },
-  'a' + 'a')
+require('./1.js')
+
+// require.ensure(['./1.js'],
+//   function(require){
+//     // require("./1.js")
+//     require("./2.js")
+//   },
+//   function(err){
+//   },
+//   'a' + 'a')
 
 // let path = require('../../test-loader?type=inner!./2.js')
 
