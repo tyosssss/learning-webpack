@@ -1,6 +1,6 @@
 /*
-	MIT License http://www.opensource.org/licenses/mit-license.php
-	Author Tobias Koppers @sokra
+  MIT License http://www.opensource.org/licenses/mit-license.php
+  Author Tobias Koppers @sokra
 */
 "use strict";
 
@@ -48,292 +48,292 @@ const SizeLimitsPlugin = require("./performance/SizeLimitsPlugin");
 const ResolverFactory = require("../../enhanced-resolve-3.0.0/lib/node").ResolverFactory;
 
 class WebpackOptionsApply extends OptionsApply {
-	constructor() {
-		super();
-	}
+  constructor() {
+    super();
+  }
 
-	process(options, compiler) {
-		let ExternalsPlugin;
+  process(options, compiler) {
+    let ExternalsPlugin;
 
-		compiler.outputPath = options.output.path;
-		compiler.recordsInputPath = options.recordsInputPath || options.recordsPath;
-		compiler.recordsOutputPath = options.recordsOutputPath || options.recordsPath;
-		compiler.name = options.name;
-		compiler.dependencies = options.dependencies;
+    compiler.outputPath = options.output.path;
+    compiler.recordsInputPath = options.recordsInputPath || options.recordsPath;
+    compiler.recordsOutputPath = options.recordsOutputPath || options.recordsPath;
+    compiler.name = options.name;
+    compiler.dependencies = options.dependencies;
 
     /**
      * 处理target -- 根据不同的target , 注册不同的target下的插件
      */
-		if (typeof options.target === "string") {
-			let JsonpTemplatePlugin;
-			let NodeSourcePlugin;
-			let NodeTargetPlugin;
-			let NodeTemplatePlugin;
+    if (typeof options.target === "string") {
+      let JsonpTemplatePlugin;
+      let NodeSourcePlugin;
+      let NodeTargetPlugin;
+      let NodeTemplatePlugin;
 
-			switch (options.target) {
-				case "web":
-					JsonpTemplatePlugin = require("./JsonpTemplatePlugin");
-					NodeSourcePlugin = require("./node/NodeSourcePlugin");
-					compiler.apply(
-						new JsonpTemplatePlugin(options.output),
-						new FunctionModulePlugin(options.output),
-						new NodeSourcePlugin(options.node),
-						new LoaderTargetPlugin("web")
-					);
-					break;
-				case "webworker":
-					{
-						let WebWorkerTemplatePlugin = require("./webworker/WebWorkerTemplatePlugin");
-						NodeSourcePlugin = require("./node/NodeSourcePlugin");
-						compiler.apply(
-							new WebWorkerTemplatePlugin(),
-							new FunctionModulePlugin(options.output),
-							new NodeSourcePlugin(options.node),
-							new LoaderTargetPlugin("webworker")
-						);
-						break;
-					}
-				case "node":
-				case "async-node":
-					NodeTemplatePlugin = require("./node/NodeTemplatePlugin");
-					NodeTargetPlugin = require("./node/NodeTargetPlugin");
-					compiler.apply(
-						new NodeTemplatePlugin({
-							asyncChunkLoading: options.target === "async-node"
-						}),
-						new FunctionModulePlugin(options.output),
-						new NodeTargetPlugin(),
-						new LoaderTargetPlugin("node")
-					);
-					break;
-				case "node-webkit":
-					JsonpTemplatePlugin = require("./JsonpTemplatePlugin");
-					NodeTargetPlugin = require("./node/NodeTargetPlugin");
-					ExternalsPlugin = require("./ExternalsPlugin");
-					compiler.apply(
-						new JsonpTemplatePlugin(options.output),
-						new FunctionModulePlugin(options.output),
-						new NodeTargetPlugin(),
-						new ExternalsPlugin("commonjs", "nw.gui"),
-						new LoaderTargetPlugin("node-webkit")
-					);
-					break;
-				case "atom":
-				case "electron":
-				case "electron-main":
-					NodeTemplatePlugin = require("./node/NodeTemplatePlugin");
-					NodeTargetPlugin = require("./node/NodeTargetPlugin");
-					ExternalsPlugin = require("./ExternalsPlugin");
-					compiler.apply(
-						new NodeTemplatePlugin({
-							asyncChunkLoading: true
-						}),
-						new FunctionModulePlugin(options.output),
-						new NodeTargetPlugin(),
-						new ExternalsPlugin("commonjs", [
-							"app",
-							"auto-updater",
-							"browser-window",
-							"content-tracing",
-							"dialog",
-							"electron",
-							"global-shortcut",
-							"ipc",
-							"ipc-main",
-							"menu",
-							"menu-item",
-							"power-monitor",
-							"power-save-blocker",
-							"protocol",
-							"session",
-							"web-contents",
-							"tray",
-							"clipboard",
-							"crash-reporter",
-							"native-image",
-							"screen",
-							"shell"
-						]),
-						new LoaderTargetPlugin(options.target)
-					);
-					break;
-				case "electron-renderer":
-					JsonpTemplatePlugin = require("./JsonpTemplatePlugin");
-					NodeTargetPlugin = require("./node/NodeTargetPlugin");
-					ExternalsPlugin = require("./ExternalsPlugin");
-					compiler.apply(
-						new JsonpTemplatePlugin(options.output),
-						new FunctionModulePlugin(options.output),
-						new NodeTargetPlugin(),
-						new ExternalsPlugin("commonjs", [
-							"desktop-capturer",
-							"electron",
-							"ipc",
-							"ipc-renderer",
-							"remote",
-							"web-frame",
-							"clipboard",
-							"crash-reporter",
-							"native-image",
-							"screen",
-							"shell"
-						]),
-						new LoaderTargetPlugin(options.target)
-					);
-					break;
-				default:
-					throw new Error("Unsupported target '" + options.target + "'.");
-			}
-		} else if (options.target !== false) {
-			options.target(compiler);
-		} else {
-			throw new Error("Unsupported target '" + options.target + "'.");
-		}
+      switch (options.target) {
+        case "web":
+          JsonpTemplatePlugin = require("./JsonpTemplatePlugin");
+          NodeSourcePlugin = require("./node/NodeSourcePlugin");
+          compiler.apply(
+            new JsonpTemplatePlugin(options.output),
+            new FunctionModulePlugin(options.output),
+            new NodeSourcePlugin(options.node),
+            new LoaderTargetPlugin("web")
+          );
+          break;
+        case "webworker":
+          {
+            let WebWorkerTemplatePlugin = require("./webworker/WebWorkerTemplatePlugin");
+            NodeSourcePlugin = require("./node/NodeSourcePlugin");
+            compiler.apply(
+              new WebWorkerTemplatePlugin(),
+              new FunctionModulePlugin(options.output),
+              new NodeSourcePlugin(options.node),
+              new LoaderTargetPlugin("webworker")
+            );
+            break;
+          }
+        case "node":
+        case "async-node":
+          NodeTemplatePlugin = require("./node/NodeTemplatePlugin");
+          NodeTargetPlugin = require("./node/NodeTargetPlugin");
+          compiler.apply(
+            new NodeTemplatePlugin({
+              asyncChunkLoading: options.target === "async-node"
+            }),
+            new FunctionModulePlugin(options.output),
+            new NodeTargetPlugin(),
+            new LoaderTargetPlugin("node")
+          );
+          break;
+        case "node-webkit":
+          JsonpTemplatePlugin = require("./JsonpTemplatePlugin");
+          NodeTargetPlugin = require("./node/NodeTargetPlugin");
+          ExternalsPlugin = require("./ExternalsPlugin");
+          compiler.apply(
+            new JsonpTemplatePlugin(options.output),
+            new FunctionModulePlugin(options.output),
+            new NodeTargetPlugin(),
+            new ExternalsPlugin("commonjs", "nw.gui"),
+            new LoaderTargetPlugin("node-webkit")
+          );
+          break;
+        case "atom":
+        case "electron":
+        case "electron-main":
+          NodeTemplatePlugin = require("./node/NodeTemplatePlugin");
+          NodeTargetPlugin = require("./node/NodeTargetPlugin");
+          ExternalsPlugin = require("./ExternalsPlugin");
+          compiler.apply(
+            new NodeTemplatePlugin({
+              asyncChunkLoading: true
+            }),
+            new FunctionModulePlugin(options.output),
+            new NodeTargetPlugin(),
+            new ExternalsPlugin("commonjs", [
+              "app",
+              "auto-updater",
+              "browser-window",
+              "content-tracing",
+              "dialog",
+              "electron",
+              "global-shortcut",
+              "ipc",
+              "ipc-main",
+              "menu",
+              "menu-item",
+              "power-monitor",
+              "power-save-blocker",
+              "protocol",
+              "session",
+              "web-contents",
+              "tray",
+              "clipboard",
+              "crash-reporter",
+              "native-image",
+              "screen",
+              "shell"
+            ]),
+            new LoaderTargetPlugin(options.target)
+          );
+          break;
+        case "electron-renderer":
+          JsonpTemplatePlugin = require("./JsonpTemplatePlugin");
+          NodeTargetPlugin = require("./node/NodeTargetPlugin");
+          ExternalsPlugin = require("./ExternalsPlugin");
+          compiler.apply(
+            new JsonpTemplatePlugin(options.output),
+            new FunctionModulePlugin(options.output),
+            new NodeTargetPlugin(),
+            new ExternalsPlugin("commonjs", [
+              "desktop-capturer",
+              "electron",
+              "ipc",
+              "ipc-renderer",
+              "remote",
+              "web-frame",
+              "clipboard",
+              "crash-reporter",
+              "native-image",
+              "screen",
+              "shell"
+            ]),
+            new LoaderTargetPlugin(options.target)
+          );
+          break;
+        default:
+          throw new Error("Unsupported target '" + options.target + "'.");
+      }
+    } else if (options.target !== false) {
+      options.target(compiler);
+    } else {
+      throw new Error("Unsupported target '" + options.target + "'.");
+    }
 
     /**
      * 处理 output.library/libraryTarget -- 根据配置加载相关的插件
      */
-		if (options.output.library ||
-			options.output.libraryTarget !== "var") {
-			let LibraryTemplatePlugin = require("./LibraryTemplatePlugin");
-			compiler.apply(new LibraryTemplatePlugin(options.output.library, options.output.libraryTarget, options.output.umdNamedDefine, options.output.auxiliaryComment || ""));
-		}
+    if (options.output.library ||
+      options.output.libraryTarget !== "var") {
+      let LibraryTemplatePlugin = require("./LibraryTemplatePlugin");
+      compiler.apply(new LibraryTemplatePlugin(options.output.library, options.output.libraryTarget, options.output.umdNamedDefine, options.output.auxiliaryComment || ""));
+    }
 
     /**
      * 处理 externals -- 根据配置加载相关的插件
      */
-		if (options.externals) {
-			ExternalsPlugin = require("./ExternalsPlugin");
-			compiler.apply(new ExternalsPlugin(options.output.libraryTarget, options.externals));
-		}
+    if (options.externals) {
+      ExternalsPlugin = require("./ExternalsPlugin");
+      compiler.apply(new ExternalsPlugin(options.output.libraryTarget, options.externals));
+    }
 
     /**
      * 处理 devtools -- 根据配置加载相关的插件
      */
-		let noSources;
-		let legacy;
-		let modern;
-		let comment;
-		if (options.devtool && (options.devtool.indexOf("sourcemap") >= 0 || options.devtool.indexOf("source-map") >= 0)) {
-			const hidden = options.devtool.indexOf("hidden") >= 0;
-			const inline = options.devtool.indexOf("inline") >= 0;
-			const evalWrapped = options.devtool.indexOf("eval") >= 0;
-			const cheap = options.devtool.indexOf("cheap") >= 0;
-			const moduleMaps = options.devtool.indexOf("module") >= 0;
-			noSources = options.devtool.indexOf("nosources") >= 0;
-			legacy = options.devtool.indexOf("@") >= 0;
-			modern = options.devtool.indexOf("#") >= 0;
-			comment = legacy && modern ? "\n/*\n//@ source" + "MappingURL=[url]\n//# source" + "MappingURL=[url]\n*/" :
-				legacy ? "\n/*\n//@ source" + "MappingURL=[url]\n*/" :
-					modern ? "\n//# source" + "MappingURL=[url]" :
-						null;
-			let Plugin = evalWrapped ? EvalSourceMapDevToolPlugin : SourceMapDevToolPlugin;
-			compiler.apply(new Plugin({
-				filename: inline ? null : options.output.sourceMapFilename,
-				moduleFilenameTemplate: options.output.devtoolModuleFilenameTemplate,
-				fallbackModuleFilenameTemplate: options.output.devtoolFallbackModuleFilenameTemplate,
-				append: hidden ? false : comment,
-				module: moduleMaps ? true : cheap ? false : true,
-				columns: cheap ? false : true,
-				lineToLine: options.output.devtoolLineToLine,
-				noSources: noSources,
-			}));
-		} else if (options.devtool && options.devtool.indexOf("eval") >= 0) {
-			legacy = options.devtool.indexOf("@") >= 0;
-			modern = options.devtool.indexOf("#") >= 0;
-			comment = legacy && modern ? "\n//@ sourceURL=[url]\n//# sourceURL=[url]" :
-				legacy ? "\n//@ sourceURL=[url]" :
-					modern ? "\n//# sourceURL=[url]" :
-						null;
-			compiler.apply(new EvalDevToolModulePlugin(comment, options.output.devtoolModuleFilenameTemplate));
-		}
+    let noSources;
+    let legacy;
+    let modern;
+    let comment;
+    if (options.devtool && (options.devtool.indexOf("sourcemap") >= 0 || options.devtool.indexOf("source-map") >= 0)) {
+      const hidden = options.devtool.indexOf("hidden") >= 0;
+      const inline = options.devtool.indexOf("inline") >= 0;
+      const evalWrapped = options.devtool.indexOf("eval") >= 0;
+      const cheap = options.devtool.indexOf("cheap") >= 0;
+      const moduleMaps = options.devtool.indexOf("module") >= 0;
+      noSources = options.devtool.indexOf("nosources") >= 0;
+      legacy = options.devtool.indexOf("@") >= 0;
+      modern = options.devtool.indexOf("#") >= 0;
+      comment = legacy && modern ? "\n/*\n//@ source" + "MappingURL=[url]\n//# source" + "MappingURL=[url]\n*/" :
+        legacy ? "\n/*\n//@ source" + "MappingURL=[url]\n*/" :
+          modern ? "\n//# source" + "MappingURL=[url]" :
+            null;
+      let Plugin = evalWrapped ? EvalSourceMapDevToolPlugin : SourceMapDevToolPlugin;
+      compiler.apply(new Plugin({
+        filename: inline ? null : options.output.sourceMapFilename,
+        moduleFilenameTemplate: options.output.devtoolModuleFilenameTemplate,
+        fallbackModuleFilenameTemplate: options.output.devtoolFallbackModuleFilenameTemplate,
+        append: hidden ? false : comment,
+        module: moduleMaps ? true : cheap ? false : true,
+        columns: cheap ? false : true,
+        lineToLine: options.output.devtoolLineToLine,
+        noSources: noSources,
+      }));
+    } else if (options.devtool && options.devtool.indexOf("eval") >= 0) {
+      legacy = options.devtool.indexOf("@") >= 0;
+      modern = options.devtool.indexOf("#") >= 0;
+      comment = legacy && modern ? "\n//@ sourceURL=[url]\n//# sourceURL=[url]" :
+        legacy ? "\n//@ sourceURL=[url]" :
+          modern ? "\n//# sourceURL=[url]" :
+            null;
+      compiler.apply(new EvalDevToolModulePlugin(comment, options.output.devtoolModuleFilenameTemplate));
+    }
 
-		// sub 入口块插件
-		compiler.apply(new EntryOptionPlugin());
+    // sub 入口块插件
+    compiler.apply(new EntryOptionPlugin());
 
-		// pub entry-option
-		compiler.applyPluginsBailResult(
-			"entry-option",
-			options.context,
-			options.entry
-		);
+    // pub entry-option
+    compiler.applyPluginsBailResult(
+      "entry-option",
+      options.context,
+      options.entry
+    );
 
-		// sub 插件
-		compiler.apply(
-			new CompatibilityPlugin(),
-			new HarmonyModulesPlugin(options.module),
-			new AMDPlugin(options.module, options.amd || {}),
-			new CommonJsPlugin(options.module),
-			new LoaderPlugin(),
-			new NodeStuffPlugin(options.node),
-			new RequireJsStuffPlugin(),
-			new APIPlugin(),
-			new ConstPlugin(),
-			new UseStrictPlugin(),
-			new RequireIncludePlugin(),
-			new RequireEnsurePlugin(),
-			new RequireContextPlugin(options.resolve.modules, options.resolve.extensions),
-			new ImportPlugin(options.module),
-			new SystemPlugin(options.module)
-		);
+    // sub 插件
+    compiler.apply(
+      new CompatibilityPlugin(),
+      new HarmonyModulesPlugin(options.module),
+      new AMDPlugin(options.module, options.amd || {}),
+      new CommonJsPlugin(options.module),
+      new LoaderPlugin(),
+      new NodeStuffPlugin(options.node),
+      new RequireJsStuffPlugin(),
+      new APIPlugin(),
+      new ConstPlugin(),
+      new UseStrictPlugin(),
+      new RequireIncludePlugin(),
+      new RequireEnsurePlugin(),
+      new RequireContextPlugin(options.resolve.modules, options.resolve.extensions),
+      new ImportPlugin(options.module),
+      new SystemPlugin(options.module)
+    );
 
-		// sub 插件
-		compiler.apply(
-			new EnsureChunkConditionsPlugin(),
-			new RemoveParentModulesPlugin(),
-			new RemoveEmptyChunksPlugin(),
-			new MergeDuplicateChunksPlugin(),
-			new FlagIncludedChunksPlugin(),
-			new OccurrenceOrderPlugin(true),
-			new FlagDependencyExportsPlugin(),
-			new FlagDependencyUsagePlugin()
-		);
+    // sub 插件
+    compiler.apply(
+      new EnsureChunkConditionsPlugin(),
+      new RemoveParentModulesPlugin(),
+      new RemoveEmptyChunksPlugin(),
+      new MergeDuplicateChunksPlugin(),
+      new FlagIncludedChunksPlugin(),
+      new OccurrenceOrderPlugin(true),
+      new FlagDependencyExportsPlugin(),
+      new FlagDependencyUsagePlugin()
+    );
 
-		// 处理 performance -- 注册相关插件
-		if (options.performance) {
-			compiler.apply(new SizeLimitsPlugin(options.performance));
-		}
+    // 处理 performance -- 注册相关插件
+    if (options.performance) {
+      compiler.apply(new SizeLimitsPlugin(options.performance));
+    }
 
-		compiler.apply(new TemplatedPathPlugin());
+    compiler.apply(new TemplatedPathPlugin());
 
-		compiler.apply(new RecordIdsPlugin());
+    compiler.apply(new RecordIdsPlugin());
 
-		compiler.apply(new WarnCaseSensitiveModulesPlugin());
+    compiler.apply(new WarnCaseSensitiveModulesPlugin());
 
-		// 处理 cache - 注册相关插件
-		if (options.cache) {
-			let CachePlugin = require("./CachePlugin");
-			compiler.apply(new CachePlugin(typeof options.cache === "object"
-				? options.cache
-				: null));
-		}
+    // 处理 cache - 注册相关插件
+    if (options.cache) {
+      let CachePlugin = require("./CachePlugin");
+      compiler.apply(new CachePlugin(typeof options.cache === "object"
+        ? options.cache
+        : null));
+    }
 
-		compiler.applyPlugins("after-plugins", compiler);
+    compiler.applyPlugins("after-plugins", compiler);
 
-		if (!compiler.inputFileSystem)
-			throw new Error("No input filesystem provided");
+    if (!compiler.inputFileSystem)
+      throw new Error("No input filesystem provided");
 
-		// 创建普通模块的解析器
-		compiler.resolvers.normal = ResolverFactory.createResolver(Object.assign({
-			fileSystem: compiler.inputFileSystem
-		}, options.resolve));
+    // 创建普通模块的解析器
+    compiler.resolvers.normal = ResolverFactory.createResolver(Object.assign({
+      fileSystem: compiler.inputFileSystem
+    }, options.resolve));
 
-		// 创建上下文模块的解析器
-		compiler.resolvers.context = ResolverFactory.createResolver(Object.assign({
-			fileSystem: compiler.inputFileSystem,
-			resolveToContext: true
-		}, options.resolve));
+    // 创建上下文模块的解析器
+    compiler.resolvers.context = ResolverFactory.createResolver(Object.assign({
+      fileSystem: compiler.inputFileSystem,
+      resolveToContext: true
+    }, options.resolve));
 
-		// 创建加载器的解析器
-		compiler.resolvers.loader = ResolverFactory.createResolver(Object.assign({
-			fileSystem: compiler.inputFileSystem
-		}, options.resolveLoader));
+    // 创建加载器的解析器
+    compiler.resolvers.loader = ResolverFactory.createResolver(Object.assign({
+      fileSystem: compiler.inputFileSystem
+    }, options.resolveLoader));
 
-		// pub after-resolvers
-		compiler.applyPlugins("after-resolvers", compiler);
+    // pub after-resolvers
+    compiler.applyPlugins("after-resolvers", compiler);
 
-		return options;
-	}
+    return options;
+  }
 }
 
 module.exports = WebpackOptionsApply;
