@@ -1,80 +1,84 @@
 /*
-	MIT License http://www.opensource.org/licenses/mit-license.php
-	Author Tobias Koppers @sokra
+  MIT License http://www.opensource.org/licenses/mit-license.php
+  Author Tobias Koppers @sokra
 */
 "use strict";
 
+/**
+ * 
+ */
 class IgnorePlugin {
-	constructor(resourceRegExp, contextRegExp) {
-		this.resourceRegExp = resourceRegExp;
-		this.contextRegExp = contextRegExp;
+  constructor(resourceRegExp, contextRegExp) {
+    this.resourceRegExp = resourceRegExp;
+    this.contextRegExp = contextRegExp;
 
-		this.checkIgnore = this.checkIgnore.bind(this);
-	}
+    this.checkIgnore = this.checkIgnore.bind(this);
+  }
 
-	apply(compiler) {
-		compiler.plugin("normal-module-factory", (nmf) => {
-			nmf.plugin("before-resolve", this.checkIgnore);
-		});
-		
-		compiler.plugin("context-module-factory", (cmf) => {
-			cmf.plugin("before-resolve", this.checkIgnore);
-		});
-	}
+  apply(compiler) {
+    compiler.plugin("normal-module-factory", (nmf) => {
+      nmf.plugin("before-resolve", this.checkIgnore);
+    });
 
-	/**
-	 * 
-	 */
-	checkIgnore(result, callback) {
-		// check if result is ignored
-		if (this.checkResult(result)) {
-			return callback();
-		}
+    compiler.plugin("context-module-factory", (cmf) => {
+      cmf.plugin("before-resolve", this.checkIgnore);
+    });
+  }
 
-		return callback(null, result);
-	}
+  /**
+   * @param {ResolveResult} 解析结果
+   * @param {Function} callback 回调函数
+   */
+  checkIgnore(result, callback) {
+    // check if result is ignored
+    if (this.checkResult(result)) {
+      return callback();
+    }
 
-	/*
-	 * Returns true if result should be ignored.
-	 * false if it shouldn't.
-	 *
-	 * Not that if "contextRegExp" is given, both the "resourceRegExp"
-	 * and "contextRegExp" have to match.
-	 */
-	checkResult(result) {
-		if (!result) {
-			return true;
-		}
+    return callback(null, result);
+  }
 
-		return (
-			this.checkResource(result.request) &&
-			this.checkContext(result.context)
-		);
-	}
+  /*
+   * Returns true if result should be ignored.
+   * false if it shouldn't.
+   *
+   * Not that if "contextRegExp" is given, both the "resourceRegExp"
+   * and "contextRegExp" have to match.
+   */
+  checkResult(result) {
+    if (!result) {
+      return true;
+    }
 
-	/*
-	 * Only returns true if a "resourceRegExp" exists
-	 * and the resource given matches the regexp.
-	 */
-	checkResource(resource) {
-		if (!this.resourceRegExp) {
-			return false;
-		}
+    return (
+      this.checkResource(result.request) &&
+      this.checkContext(result.context)
+    );
+  }
 
-		return this.resourceRegExp.test(resource);
-	}
+  /*
+   * Only returns true if a "resourceRegExp" exists
+   * and the resource given matches the regexp.
+   */
+  checkResource(resource) {
+    if (!this.resourceRegExp) {
+      return false;
+    }
 
-	/*
-	 * Returns true if contextRegExp does not exist
-	 * or if context matches the given regexp.
-	 */
-	checkContext(context) {
-		if (!this.contextRegExp) {
-			return true;
-		}
+    return this.resourceRegExp.test(resource);
+  }
 
-		return this.contextRegExp.test(context);
-	}
+  /*
+   * Returns true if contextRegExp does not exist
+   * or if context matches the given regexp.
+   */
+  checkContext(context) {
+    if (!this.contextRegExp) {
+      return true;
+    }
+
+    return this.contextRegExp.test(context);
+  }
 }
 
 module.exports = IgnorePlugin;

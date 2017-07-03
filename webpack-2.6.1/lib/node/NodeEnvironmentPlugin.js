@@ -9,6 +9,9 @@ const NodeOutputFileSystem = require("./NodeOutputFileSystem");
 const NodeJsInputFileSystem = require("enhanced-resolve/lib/NodeJsInputFileSystem");
 const CachedInputFileSystem = require("enhanced-resolve/lib/CachedInputFileSystem");
 
+/**
+ * 初始化Node环境的插件
+ */
 class NodeEnvironmentPlugin {
 	apply(compiler) {
 		const inputFileSystem = compiler.inputFileSystem = new CachedInputFileSystem(new NodeJsInputFileSystem(), 60000);
@@ -18,7 +21,7 @@ class NodeEnvironmentPlugin {
 		compiler.plugin("before-run", (compiler, callback) => {
 			if (compiler.inputFileSystem === inputFileSystem)
 				inputFileSystem.purge();
-			
+
 			callback();
 		});
 	}

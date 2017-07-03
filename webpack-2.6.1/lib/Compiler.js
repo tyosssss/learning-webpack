@@ -242,7 +242,7 @@ Compiler.prototype.watch = function (watchOptions, handler) {
 
 /**
  * 运行 编译
- * @param {Function} callback
+ * @param {Function} callback 当运行完毕之后触发
  */
 Compiler.prototype.run = function (callback) {
   var self = this;

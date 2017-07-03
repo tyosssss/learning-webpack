@@ -481,7 +481,7 @@ class NormalModuleFactory extends Tapable {
         // before-resolve中发生错误 , 那么直接返回
         if (err) return onCreated(err);
 
-        // result == null , 所有需要忽略该模块 , 那么直接返回null
+        // result == null , 如果需要忽略该模块 , 那么直接返回null
         if (!result) return onCreated();
 
         // 创建module factory
