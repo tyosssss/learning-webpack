@@ -8,29 +8,41 @@ const asyncLib = require("async");
 const PrefetchDependency = require("./dependencies/PrefetchDependency");
 const NormalModule = require("./NormalModule");
 
+/**
+ * 自动预加载模块
+ * 
+ * @class AutomaticPrefetchPlugin
+ */
 class AutomaticPrefetchPlugin {
-	apply(compiler) {
-		compiler.plugin("compilation", (compilation, params) => {
-			const normalModuleFactory = params.normalModuleFactory;
+  apply(compiler) {
+    compiler.plugin("compilation", (compilation, params) => {
+      const normalModuleFactory = params.normalModuleFactory;
+      compilation.dependencyFactories.set(PrefetchDependency, normalModuleFactory);
+    });
 
-			compilation.dependencyFactories.set(PrefetchDependency, normalModuleFactory);
-		});
-		let lastModules = null;
-		compiler.plugin("after-compile", (compilation, callback) => {
-			lastModules = compilation.modules
-				.filter(m => m instanceof NormalModule)
-				.map(m => ({
-					context: m.context,
-					request: m.request
-				}));
-			callback();
-		});
-		compiler.plugin("make", (compilation, callback) => {
-			if(!lastModules) return callback();
-			asyncLib.forEach(lastModules, (m, callback) => {
-				compilation.prefetch(m.context || compiler.context, new PrefetchDependency(m.request), callback);
-			}, callback);
-		});
-	}
+    let lastModules = null;
+
+    compiler.plugin("make", (compilation, callback) => {
+      if (!lastModules) return callback();
+
+      asyncLib.forEach(lastModules, (m, callback) => {
+        compilation.prefetch(
+          m.context || compiler.context,
+          new PrefetchDependency(m.request), callback
+        );
+      }, callback);
+    });
+
+    compiler.plugin("after-compile", (compilation, callback) => {
+      lastModules = compilation.modules
+        .filter(m => m instanceof NormalModule)
+        .map(m => ({
+          context: m.context,
+          request: m.request
+        }));
+
+      callback();
+    });
+  }
 }
 module.exports = AutomaticPrefetchPlugin;

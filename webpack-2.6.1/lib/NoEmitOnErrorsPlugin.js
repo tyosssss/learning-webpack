@@ -4,19 +4,26 @@
 */
 "use strict";
 
+/**
+ * 
+ * 
+ * @class NoEmitOnErrorsPlugin
+ */
 class NoEmitOnErrorsPlugin {
-	apply(compiler) {
-		compiler.plugin("should-emit", (compilation) => {
-			if(compilation.errors.length > 0)
-				return false;
-		});
-		compiler.plugin("compilation", (compilation) => {
-			compilation.plugin("should-record", () => {
-				if(compilation.errors.length > 0)
-					return false;
-			});
-		});
-	}
+  apply(compiler) {
+    compiler.plugin("should-emit", (compilation) => {
+      // 跳过emit阶段
+      if (compilation.errors.length > 0)
+        return false;
+    });
+
+    compiler.plugin("compilation", (compilation) => {
+      compilation.plugin("should-record", () => {
+        if (compilation.errors.length > 0)
+          return false;
+      });
+    });
+  }
 }
 
 module.exports = NoEmitOnErrorsPlugin;

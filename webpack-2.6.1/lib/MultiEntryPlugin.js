@@ -8,33 +8,36 @@ const MultiEntryDependency = require("./dependencies/MultiEntryDependency");
 const SingleEntryDependency = require("./dependencies/SingleEntryDependency");
 const MultiModuleFactory = require("./MultiModuleFactory");
 
+/**
+ * 处理多文件入口
+ */
 module.exports = class MultiEntryPlugin {
-	constructor(context, entries, name) {
-		this.context = context;
-		this.entries = entries;
-		this.name = name;
-	}
+  constructor(context, entries, name) {
+    this.context = context;
+    this.entries = entries;
+    this.name = name;
+  }
 
-	apply(compiler) {
-		compiler.plugin("compilation", (compilation, params) => {
-			const multiModuleFactory = new MultiModuleFactory();
-			const normalModuleFactory = params.normalModuleFactory;
+  apply(compiler) {
+    compiler.plugin("compilation", (compilation, params) => {
+      const multiModuleFactory = new MultiModuleFactory();
+      const normalModuleFactory = params.normalModuleFactory;
 
-			compilation.dependencyFactories.set(MultiEntryDependency, multiModuleFactory);
-			compilation.dependencyFactories.set(SingleEntryDependency, normalModuleFactory);
-		});
-    
-		compiler.plugin("make", (compilation, callback) => {
-			const dep = MultiEntryPlugin.createDependency(this.entries, this.name);
-			compilation.addEntry(this.context, dep, this.name, callback);
-		});
-	}
+      compilation.dependencyFactories.set(MultiEntryDependency, multiModuleFactory);
+      compilation.dependencyFactories.set(SingleEntryDependency, normalModuleFactory);
+    });
 
-	static createDependency(entries, name) {
-		return new MultiEntryDependency(entries.map((e, idx) => {
-			const dep = new SingleEntryDependency(e);
-			dep.loc = name + ":" + (100000 + idx);
-			return dep;
-		}), name);
-	}
+    compiler.plugin("make", (compilation, callback) => {
+      const dep = MultiEntryPlugin.createDependency(this.entries, this.name);
+      compilation.addEntry(this.context, dep, this.name, callback);
+    });
+  }
+
+  static createDependency(entries, name) {
+    return new MultiEntryDependency(entries.map((e, idx) => {
+      const dep = new SingleEntryDependency(e);
+      dep.loc = name + ":" + (100000 + idx);
+      return dep;
+    }), name);
+  }
 };

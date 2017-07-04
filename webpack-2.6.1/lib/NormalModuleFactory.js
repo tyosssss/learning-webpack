@@ -114,7 +114,6 @@ class NormalModuleFactory extends Tapable {
           return onModuleCreated();
         }
 
-
         resolver(
           result,
 
@@ -256,7 +255,7 @@ class NormalModuleFactory extends Tapable {
            * results[1] : { resourceResolveData , resource }
            */
           if (err) {
-            return callback(err);
+            return onResolved(err);
           }
 
           /**
@@ -283,7 +282,7 @@ class NormalModuleFactory extends Tapable {
             return onResolved(e);
           }
 
-          // 
+          // 表示忽略的组件
           if (resource === false) {
             // ignored
             return onResolved(null,
@@ -438,7 +437,7 @@ class NormalModuleFactory extends Tapable {
                 resourceResolveData,
 
                 /**
-                 * 代码解析器
+                 * 代码解析器实例
                  * @type {Parser}
                  */
                 parser: this.getParser(settings.parser)
@@ -459,7 +458,7 @@ class NormalModuleFactory extends Tapable {
     const dependencies = data.dependencies;
     const cacheEntry = dependencies[0].__NormalModuleFactoryCache;
 
-    // 如果已经缓存
+    // 如果已经缓存 , 那么直接返回
     if (cacheEntry) {
       return onCreated(null, cacheEntry);
     }
@@ -476,7 +475,10 @@ class NormalModuleFactory extends Tapable {
 
     this.applyPluginsAsyncWaterfall(
       "before-resolve",
+
       resolverParams,
+
+      // onModuleCreated
       (err, result) => {
         // before-resolve中发生错误 , 那么直接返回
         if (err) return onCreated(err);
@@ -488,7 +490,9 @@ class NormalModuleFactory extends Tapable {
         const factory = this.applyPluginsWaterfall0("factory", null);
 
         // Ignored
-        if (!factory) return onCreated();
+        if (!factory) {
+          return onCreated();
+        }
 
         // 创建模块
         factory(result, (err, module) => {
@@ -574,8 +578,8 @@ class NormalModuleFactory extends Tapable {
   }
 
 	/**
-	 * 获得代码解析器
-	 * @param {*} parserOptions 
+	 * 获得代码解析器实例
+	 * @param {Object} parserOptions 
 	 */
   getParser(parserOptions) {
     let ident = "null";
@@ -596,8 +600,8 @@ class NormalModuleFactory extends Tapable {
   }
 
 	/**
-   * 创建代码解析器
-	 * @param {*} parserOptions 
+   * 创建代码解析器实例
+	 * @param {Object} parserOptions 
 	 */
   createParser(parserOptions) {
     const parser = new Parser();

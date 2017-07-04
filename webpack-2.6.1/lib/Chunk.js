@@ -14,7 +14,7 @@ const byId = (a, b) => {
 };
 
 /**
- * 块
+ * 代码块
  * 
  * @class Chunk
  */
@@ -99,6 +99,14 @@ class Chunk {
     return !!this.entryModule;
   }
 
+  /**
+   * 
+   * 
+   * @param {any} collection 
+   * @param {any} item 
+   * @returns 
+   * @memberof Chunk
+   */
   addToCollection(collection, item) {
     if (item === this) {
       return false;
@@ -112,22 +120,57 @@ class Chunk {
     return true;
   }
 
+  /**
+   * 
+   * 
+   * @param {any} chunk 
+   * @returns 
+   * @memberof Chunk
+   */
   addChunk(chunk) {
     return this.addToCollection(this.chunks, chunk);
   }
 
+  /**
+   * 
+   * 
+   * @param {any} parentChunk 
+   * @returns 
+   * @memberof Chunk
+   */
   addParent(parentChunk) {
     return this.addToCollection(this.parents, parentChunk);
   }
 
+  /**
+   * 
+   * 
+   * @param {any} module 
+   * @returns 
+   * @memberof Chunk
+   */
   addModule(module) {
     return this.addToCollection(this.modules, module);
   }
 
+  /**
+   * 
+   * 
+   * @param {any} block 
+   * @returns 
+   * @memberof Chunk
+   */
   addBlock(block) {
     return this.addToCollection(this.blocks, block);
   }
 
+  /**
+   * 
+   * 
+   * @param {any} module 
+   * @returns 
+   * @memberof Chunk
+   */
   removeModule(module) {
     const idx = this.modules.indexOf(module);
     if (idx >= 0) {

@@ -256,6 +256,7 @@ class Module extends DependenciesBlock {
     this.usedExports = null;
     this.providedExports = null;
     this.chunks.length = 0;
+    
     super.disconnect();
   }
 }

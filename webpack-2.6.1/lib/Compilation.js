@@ -81,15 +81,15 @@ class Compilation extends Tapable {
      * 
      */
     this.compiler = compiler;
-    
+
     /**
      * 解析器
      * @type {Object}
      */
     this.resolvers = compiler.resolvers;
-    
+
     /**
-     * 文件系
+     * 文件系统
      * @type {FileSystem}
      */
     this.inputFileSystem = compiler.inputFileSystem;
@@ -139,17 +139,20 @@ class Compilation extends Tapable {
     this.namedChunks = {};
 
     /**
-     * 
+     * 存储编译中遇到的所有模块
+     * @type {Module[]}
      */
     this.modules = [];
 
     /**
-     * 
+     * 存储编译中遇到的所有模块
+     * @type {Map<identifier,Module>}
      */
     this._modules = {};
 
     /**
-     * 
+     * 缓存
+     * @type {Object}
      */
     this.cache = null;
 
@@ -174,7 +177,7 @@ class Compilation extends Tapable {
     this.additionalChunkAssets = [];
 
     /**
-     * 
+     * @type {Map<file : String , source : Source>}
      */
     this.assets = {};
 
@@ -209,10 +212,10 @@ class Compilation extends Tapable {
 
 	/**
 	 * 添加入口依赖
-	 * @param {String} context 上下文路径
-	 * @param {Dependency} entry 入口模块依赖
-	 * @param {String} name 入口的名称
-	 * @param {Function} callback 回调函数 
+	 * @param {String} context 上下文路径 ( config.output )
+	 * @param {ModuleDependency} entry 入口模块依赖
+	 * @param {String} name 入口块的名称 ( ChunkName )
+	 * @param {Function} callback 回调函数
 	 */
   addEntry(context, entry, name, callback) {
     const slot = {
@@ -230,6 +233,7 @@ class Compilation extends Tapable {
       (module) => {
         entry.module = module;
         this.entries.push(module);
+
         module.issuer = null;
       },
       (err, module) => {
@@ -240,6 +244,7 @@ class Compilation extends Tapable {
         if (module) {
           slot.module = module;
         } else {
+          // 从preparedChunks中移除
           const idx = this.preparedChunks.indexOf(slot);
           this.preparedChunks.splice(idx, 1);
         }
@@ -249,18 +254,21 @@ class Compilation extends Tapable {
   }
 
 	/**
-	 * 
-	 * @param {String} context 
-	 * @param {Dependency} dependency 
-	 * @param {Function} callback 
+	 * 预加载指定依赖模块
+	 * @param {String} context 上下文路径
+	 * @param {PrefetchDependency} dependency 预取的依赖 
+	 * @param {Function} callback 回调函数
 	 */
   prefetch(context, dependency, callback) {
-    this._addModuleChain(context, dependency, module => {
-
-      module.prefetched = true;
-      module.issuer = null;
-
-    }, callback);
+    this._addModuleChain(
+      context,
+      dependency,
+      function onModule(module) {
+        module.prefetched = true;
+        module.issuer = null;
+      },
+      callback
+    );
   }
 
   /**
@@ -273,9 +281,7 @@ class Compilation extends Tapable {
   _addModuleChain(context, dependency, onModule, callback) {
     const start = this.profile && Date.now();
 
-    //
-    // 处理错误
-    // 
+    // 包装错误回调函数
     const errorAndCallback =
       this.bail
         ? function errorAndCallback(err) {
@@ -287,14 +293,15 @@ class Compilation extends Tapable {
           callback();
         }.bind(this);
 
+    // 依赖无效
     if (typeof dependency !== "object" ||
       dependency === null ||
       !dependency.constructor) {
       throw new Error("Parameter 'dependency' must be a Dependency");
     }
 
+    // 没有找到对应的模块工厂
     const moduleFactory = this.dependencyFactories.get(dependency.constructor);
-
     if (!moduleFactory) {
       throw new Error(`No dependency factory available for this dependency type: ${dependency.constructor.name}`);
     }
@@ -314,6 +321,7 @@ class Compilation extends Tapable {
        * @param {Module} 模块
        */
       (err, module) => {
+        // 处理错误
         if (err) {
           return errorAndCallback(new EntryModuleNotFoundError(err));
         }
@@ -330,10 +338,11 @@ class Compilation extends Tapable {
           module.profile.factory = afterFactory - start;
         }
 
+        // 添加模块
         const result = this.addModule(module);
 
         //
-        // 处理旧模块 -- 编译过程中 , 已经出现过的模块
+        // result = false 已构建的模块实例
         // onModule --> callback()
         //
         if (!result) {
@@ -350,7 +359,7 @@ class Compilation extends Tapable {
         }
 
         //
-        // 处理新的模块 -- 编译过程中 , 第一次出现的模块
+        // result = Module 处理 缓存的模块
         // onModule() --> buildModule() --> callback()
         //
         if (result instanceof Module) {
@@ -367,11 +376,12 @@ class Compilation extends Tapable {
           return;
         }
 
+        //
+        // 处理未构建的模块
+        //
         onModule(module);
 
-        //
         // 构建模块
-        //
         this.buildModule(module, false, null, null, (err) => {
           if (err) {
             return errorAndCallback(err);
@@ -772,35 +782,42 @@ class Compilation extends Tapable {
 
 	/**
 	 * 将module添加到编译实例的模块列表中
-	 * @param {Module} module 模块
+   * 
+   * 返回值
+   * true  -- 
+   * false -- 模块已构建 , 无需构建
+   * 
+	 * @param {Module} module 模块实例
 	 * @param {String} cacheGroup 缓存组名
-	 * @returns {Boolean} true=新增成功 , false=读取缓存
+	 * @returns {Boolean|Module} 
 	 */
   addModule(module, cacheGroup) {
     const identifier = module.identifier();
 
+    // 模块已经构建 , 那么返回false
     if (this._modules[identifier]) {
       return false;
     }
 
-    //
-    // 缓存 && add
-    //
+    // 获得key
     const cacheName = (cacheGroup || "m") + identifier;
 
     //
     // 读取缓存
     //
     if (this.cache && this.cache[cacheName]) {
+      // 获得缓存的模块
       const cacheModule = this.cache[cacheName];
 
       let rebuild = true;
 
-      if (!cacheModule.error &&
-        cacheModule.cacheable &&
-        this.fileTimestamps &&
-        this.contextTimestamps) {
-        rebuild = cacheModule.needRebuild(this.fileTimestamps, this.contextTimestamps);
+      if (!cacheModule.error &&                           // 没有出错
+        cacheModule.cacheable &&                          // 可缓存
+        this.fileTimestamps && this.contextTimestamps) {  // 有时间戳
+        rebuild = cacheModule.needRebuild(
+          this.fileTimestamps,
+          this.contextTimestamps
+        );
       }
 
       if (!rebuild) {
@@ -821,6 +838,9 @@ class Compilation extends Tapable {
     // 撤销构建 -- 销毁构建相关的所有信息
     module.unbuild();
 
+    //
+    // 维护
+    //
     this._modules[identifier] = module;
 
     if (this.cache) {
@@ -872,14 +892,7 @@ class Compilation extends Tapable {
     }
   }
 
-  unseal() {
-    this.applyPlugins0("unseal");
-    this.chunks.length = 0;
-    this.namedChunks = {};
-    this.additionalChunkAssets.length = 0;
-    this.assets = {};
-    this.modules.forEach(module => module.unseal());
-  }
+
 
   /**
    * 打包
@@ -1766,17 +1779,34 @@ class Compilation extends Tapable {
   }
 
   /**
-   * 根据文件模板 , 生成最终的文件路径
    * 
-   * @param {String} filename 文件模板
-   * @param {Object} data 数据
-   * @returns 
    * 
    * @memberof Compilation
+   */
+  unseal() {
+    this.applyPlugins0("unseal");
+    this.chunks.length = 0;
+    this.namedChunks = {};
+    this.additionalChunkAssets.length = 0;
+    this.assets = {};
+    this.modules.forEach(module => module.unseal());
+  }
+
+
+
+  /**
+   * 调用路径模板引擎 , 返回解析之后的路径
+   * 
+   * @param {String} filename 文件路径模板
+   * @param {Object} data 解析模板时使用的数据
+   * @returns {String} 返回解析之后的路径
+   * 
+   * @memberof Compilation 
    */
   getPath(filename, data) {
     data = data || {};
     data.hash = data.hash || this.hash;
+
     return this.mainTemplate.applyPluginsWaterfall("asset-path", filename, data);
   }
 

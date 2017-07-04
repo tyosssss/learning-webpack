@@ -261,11 +261,13 @@ Compiler.prototype.run = function (callback) {
         self.compile(function onCompiled(err, compilation) {
           if (err) return callback(err);
 
+          // 事件返回false , 表示跳过emit阶段
           if (self.applyPluginsBailResult("should-emit", compilation) === false) {
             var stats = new Stats(compilation);
             stats.startTime = startTime;
             stats.endTime = Date.now();
             self.applyPlugins("done", stats);
+
             return callback(null, stats);
           }
 
@@ -294,6 +296,7 @@ Compiler.prototype.run = function (callback) {
               stats.startTime = startTime;
               stats.endTime = Date.now();
               self.applyPlugins("done", stats);
+              
               return callback(null, stats);
             });
           });
@@ -418,59 +421,68 @@ Compiler.prototype.createCompilation = function () {
 
 
 /**
- * 
- * @param {Compilation} compilation
- * @param {Function} callback
+ * 生成资源文件
+ * @param {Compilation} compilation 编译实例
+ * @param {Function} callback 回调函数
  */
 Compiler.prototype.emitAssets = function (compilation, callback) {
   var outputPath;
 
-  this.applyPluginsAsync("emit", compilation, function (err) {
-    if (err) return callback(err);
-    outputPath = compilation.getPath(this.outputPath);
-    this.outputFileSystem.mkdirp(outputPath, emitFiles.bind(this));
-  }.bind(this));
-
   function emitFiles(err) {
     if (err) return callback(err);
 
-    require("async").forEach(Object.keys(compilation.assets), function (file, callback) {
+    require("async").forEach(
+      Object.keys(compilation.assets),
 
-      var targetFile = file;
-      var queryStringIdx = targetFile.indexOf("?");
-      if (queryStringIdx >= 0) {
-        targetFile = targetFile.substr(0, queryStringIdx);
-      }
+      function iterator(file, callback) {
+        var targetFile = file;
+        var queryStringIdx = targetFile.indexOf("?");
+        if (queryStringIdx >= 0) {
+          targetFile = targetFile.substr(0, queryStringIdx);
+        }
 
-      if (targetFile.match(/\/|\\/)) {
-        var dir = path.dirname(targetFile);
-        this.outputFileSystem.mkdirp(this.outputFileSystem.join(outputPath, dir), writeOut.bind(this));
-      } else writeOut.call(this);
+        if (targetFile.match(/\/|\\/)) {
+          var dir = path.dirname(targetFile);
+          
+          // join(outputPath , fileDirPath)
+          this.outputFileSystem.mkdirp(
+            this.outputFileSystem.join(outputPath, dir),
+            writeOut.bind(this)
+          );
+        } else {
+          writeOut.call(this);
+        }
 
-      function writeOut(err) {
+        function writeOut(err) {
+          if (err) return callback(err);
+          
+          var targetPath = this.outputFileSystem.join(outputPath, targetFile);
+          var source = compilation.assets[file];
+          
+          if (source.existsAt === targetPath) {
+            source.emitted = false;
+            return callback();
+          }
+
+          var content = source.source();
+
+          if (!Buffer.isBuffer(content)) {
+            content = new Buffer(content, "utf8"); //eslint-disable-line
+          }
+
+          source.existsAt = targetPath;
+          source.emitted = true;
+
+          this.outputFileSystem.writeFile(targetPath, content, callback);
+        }
+      }.bind(this),
+
+      function onCompleted(err) {
         if (err) return callback(err);
-        var targetPath = this.outputFileSystem.join(outputPath, targetFile);
-        var source = compilation.assets[file];
-        if (source.existsAt === targetPath) {
-          source.emitted = false;
-          return callback();
-        }
-        var content = source.source();
 
-        if (!Buffer.isBuffer(content)) {
-          content = new Buffer(content, "utf8"); //eslint-disable-line
-        }
-
-        source.existsAt = targetPath;
-        source.emitted = true;
-        this.outputFileSystem.writeFile(targetPath, content, callback);
-      }
-
-    }.bind(this), function (err) {
-      if (err) return callback(err);
-
-      afterEmit.call(this);
-    }.bind(this));
+        afterEmit.call(this);
+      }.bind(this)
+    );
   }
 
   function afterEmit() {
@@ -481,6 +493,14 @@ Compiler.prototype.emitAssets = function (compilation, callback) {
     });
   }
 
+  this.applyPluginsAsync("emit", compilation, function (err) {
+    if (err) return callback(err);
+
+    outputPath = compilation.getPath(this.outputPath);
+
+    // 创建级联目录
+    this.outputFileSystem.mkdirp(outputPath, emitFiles.bind(this));
+  }.bind(this));
 };
 
 
@@ -521,7 +541,7 @@ Compiler.prototype.readRecords = function readRecords(callback) {
 };
 
 /**
- * 
+ * @param {Function} callback
  */
 Compiler.prototype.emitRecords = function emitRecords(callback) {
   if (!this.recordsOutputPath) return callback();

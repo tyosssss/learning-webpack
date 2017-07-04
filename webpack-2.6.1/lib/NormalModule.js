@@ -140,7 +140,7 @@ class NormalModule extends Module {
    */
   nameForCondition() {
     const idx = this.resource.indexOf("?");
-    
+
     if (idx >= 0) return this.resource.substr(0, idx);
     return this.resource;
   }
@@ -385,6 +385,12 @@ class NormalModule extends Module {
     return new OriginalSource(source, identifier);
   }
 
+  /**
+   * 
+   * 
+   * @param {any} error 
+   * @memberof NormalModule
+   */
   markModuleAsErrored(error) {
     this.meta = null;
     this.error = error;
@@ -652,21 +658,17 @@ class NormalModule extends Module {
     return this._source;
   }
 
-  getHighestTimestamp(keys, timestampsByKey) {
-    let highestTimestamp = 0;
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      const timestamp = timestampsByKey[key];
-      // if there is no timestamp yet, early return with Infinity
-      if (!timestamp) return Infinity;
-      highestTimestamp = Math.max(highestTimestamp, timestamp);
-    }
-    return highestTimestamp;
-  }
-
+  /**
+   * 检查模块是否需要重新构建
+   * 
+   * @param {Map} fileTimestamps 
+   * @param {Map} contextTimestamps 
+   * @returns 
+   * @memberof NormalModule
+   */
   needRebuild(fileTimestamps, contextTimestamps) {
-    const highestFileDepTimestamp = this.getHighestTimestamp(
-      this.fileDependencies, fileTimestamps);
+    const highestFileDepTimestamp = this.getHighestTimestamp(this.fileDependencies, fileTimestamps);
+
     // if the hightest is Infinity, we need a rebuild
     // exit early here.
     if (highestFileDepTimestamp === Infinity) {
@@ -687,10 +689,45 @@ class NormalModule extends Module {
     return Math.max(highestContextDepTimestamp, highestFileDepTimestamp) >= this.buildTimestamp;
   }
 
+  /**
+   * 
+   * 
+   * @param {any} keys 
+   * @param {any} timestampsByKey 
+   * @returns 
+   * @memberof NormalModule
+   */
+  getHighestTimestamp(keys, timestampsByKey) {
+    let highestTimestamp = 0;
+    
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const timestamp = timestampsByKey[key];
+      // if there is no timestamp yet, early return with Infinity
+      if (!timestamp) return Infinity;
+      highestTimestamp = Math.max(highestTimestamp, timestamp);
+    }
+
+    return highestTimestamp;
+  }
+
+  /**
+   * 
+   * 
+   * @returns 
+   * @memberof NormalModule
+   */
   size() {
     return this._source ? this._source.size() : -1;
   }
 
+  /**
+   * 
+   * 
+   * @param {any} hash 
+   * @returns 
+   * @memberof NormalModule
+   */
   updateHashWithSource(hash) {
     if (!this._source) {
       hash.update("null");

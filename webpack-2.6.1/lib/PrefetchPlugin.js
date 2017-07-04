@@ -5,27 +5,37 @@
 "use strict";
 const PrefetchDependency = require("./dependencies/PrefetchDependency");
 
+/**
+ * 模块的预加载插件
+ * 
+ * @class PrefetchPlugin
+ */
 class PrefetchPlugin {
 
-	constructor(context, request) {
-		if(!request) {
-			this.request = context;
-		} else {
-			this.context = context;
-			this.request = request;
-		}
-	}
+  constructor(context, request) {
+    if (!request) {
+      this.request = context;
+    } else {
+      this.context = context;
+      this.request = request;
+    }
+  }
 
-	apply(compiler) {
-		compiler.plugin("compilation", (compilation, params) => {
-			const normalModuleFactory = params.normalModuleFactory;
+  apply(compiler) {
+    compiler.plugin("compilation", (compilation, params) => {
+      const normalModuleFactory = params.normalModuleFactory;
 
-			compilation.dependencyFactories.set(PrefetchDependency, normalModuleFactory);
-		});
-		compiler.plugin("make", (compilation, callback) => {
-			compilation.prefetch(this.context || compiler.context, new PrefetchDependency(this.request), callback);
-		});
-	}
+      compilation.dependencyFactories.set(PrefetchDependency, normalModuleFactory);
+    });
+
+    compiler.plugin("make", (compilation, callback) => {
+      compilation.prefetch(
+        this.context || compiler.context,
+        new PrefetchDependency(this.request),
+        callback
+      );
+    });
+  }
 
 }
 module.exports = PrefetchPlugin;
