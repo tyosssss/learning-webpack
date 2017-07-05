@@ -413,14 +413,17 @@ class Compilation extends Tapable {
    * @param {Module} module 
    * @param {Boolean} optional 
    * @param {} origin 
-   * @param {} dependencies 
+   * @param {Dependency[]} dependencies 
    * @param {Function} thisCallback 
+   * 
+   * @returns {Function}
    * 
    * @memberof Compilation
    */
   buildModule(module, optional, origin, dependencies, thisCallback) {
     this.applyPlugins1("build-module", module);
 
+    // 正在被构建 , 保存回调函数 , 直接返回
     if (module.building) {
       return module.building.push(thisCallback);
     }
@@ -428,6 +431,8 @@ class Compilation extends Tapable {
     const building = module.building = [thisCallback];
 
     //
+    // addEntry是异步并发的 , 避免多次重复执行回调函数
+    // 收集回调函数 , 统一延迟到模块构建成功之后处理
     // 构造依赖链式是并发的
     // 积压回调函数 , 等该模块构造完毕之后 , 再一并触发
     //
@@ -436,9 +441,7 @@ class Compilation extends Tapable {
       building.forEach(cb => cb(err));
     }
 
-    //
     // 构建模块
-    //
     module.build(
       this.options,
       this, this.resolvers.normal,

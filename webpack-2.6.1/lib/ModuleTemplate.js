@@ -20,9 +20,30 @@ module.exports = class ModuleTemplate extends Template {
    */
   render(module, dependencyTemplates, chunk) {
     const moduleSource = module.source(dependencyTemplates, this.outputOptions, this.requestShortener);
-    const moduleSourcePostModule = this.applyPluginsWaterfall("module", moduleSource, module, chunk, dependencyTemplates);
-    const moduleSourcePostRender = this.applyPluginsWaterfall("render", moduleSourcePostModule, module, chunk, dependencyTemplates);
-    return this.applyPluginsWaterfall("package", moduleSourcePostRender, module, chunk, dependencyTemplates);
+
+    const moduleSourcePostModule = this.applyPluginsWaterfall(
+      "module",
+      moduleSource,
+      module,
+      chunk,
+      dependencyTemplates
+    );
+
+    const moduleSourcePostRender = this.applyPluginsWaterfall(
+      "render",
+      moduleSourcePostModule,
+      module,
+      chunk,
+      dependencyTemplates
+    );
+
+    return this.applyPluginsWaterfall(
+      "package",
+      moduleSourcePostRender,
+      module,
+      chunk,
+      dependencyTemplates
+    );
   }
 
   /**

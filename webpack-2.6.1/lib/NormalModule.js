@@ -174,7 +174,7 @@ class NormalModule extends Module {
 
 
 	/** 
-	 * 构建
+	 * 构建模块
 	 * @param {Object} options 配置
 	 * @param {Compilation} compilation 编译对象
 	 * @param {Resolver} resolver 路径解析器
@@ -199,6 +199,7 @@ class NormalModule extends Module {
       // if we have an error mark module as failed and exit
       if (err) {
         this.markModuleAsErrored(err);
+        
         return callback();
       }
 
@@ -250,44 +251,52 @@ class NormalModule extends Module {
     //
     // 运行加载器
     //
-    runLoaders({
-      resource: this.resource,                // 资源路径
-      loaders: this.loaders,                  // 加载器的配置
-      context: loaderContext,                 // 加载器的执行上下文
-      readResource: fs.readFile.bind(fs)      // 读取文件的方法
-    }, (err, result) => {
+    runLoaders(
+      {
+        resource: this.resource,                // 资源路径
+        loaders: this.loaders,                  // 加载器的配置
+        context: loaderContext,                 // 加载器的执行上下文
+        readResource: fs.readFile.bind(fs)      // 读取文件的方法
+      },
+      /**
+       * done
+       * @param {Error} err 错误
+       * @param {Object} result 加载器的处理结果
+       * @param {Buffer} result.resourceBuffer 资源二进制
+       * @param {String} result.result[0] 原始内容
+       * @param {String} result.result[1] 原始内容的映射
+       */
+      (err, result) => {
+        
+        if (result) {
+          this.cacheable = result.cacheable;
+          this.fileDependencies = result.fileDependencies;
+          this.contextDependencies = result.contextDependencies;
+        }
 
-      if (result) {
-        this.cacheable = result.cacheable;
-        this.fileDependencies = result.fileDependencies;
-        this.contextDependencies = result.contextDependencies;
-      }
+        if (err) {
+          const error = new ModuleBuildError(this, err);
+          return callback(error);
+        }
 
-      if (err) {
-        const error = new ModuleBuildError(this, err);
-        return callback(error);
-      }
+        const resourceBuffer = result.resourceBuffer;
+        const source = result.result[0];
+        const sourceMap = result.result[1];
 
-      const resourceBuffer = result.resourceBuffer;
-      const source = result.result[0];
-      const sourceMap = result.result[1];
+        if (!Buffer.isBuffer(source) && typeof source !== "string") {
+          const error = new ModuleBuildError(this, new Error("Final loader didn't return a Buffer or String"));
+          return callback(error);
+        }
 
-      if (!Buffer.isBuffer(source) && typeof source !== "string") {
-        const error = new ModuleBuildError(this, new Error("Final loader didn't return a Buffer or String"));
-        return callback(error);
-      }
+        // 创建源
+        this._source = this.createSource(
+          asString(source),
+          resourceBuffer,
+          sourceMap
+        );
 
-      //
-      // 创建源
-      //
-      this._source = this.createSource(
-        asString(source),
-        resourceBuffer,
-        sourceMap
-      );
-
-      return callback();
-    });
+        return callback();
+      });
   }
 
   /**
@@ -386,9 +395,9 @@ class NormalModule extends Module {
   }
 
   /**
+   * 标记模块错误
    * 
-   * 
-   * @param {any} error 
+   * @param {Error} error 
    * @memberof NormalModule
    */
   markModuleAsErrored(error) {
@@ -446,15 +455,127 @@ class NormalModule extends Module {
 
 
   /**
+   * 获得hash签名 ( 内容签名 )
    * 
-   * 
-   * @returns 
+   * @returns {String}
    * @memberof NormalModule
    */
   getHashDigest() {
     const hash = crypto.createHash("md5");
     this.updateHash(hash);
+
     return hash.digest("hex");
+  }
+
+
+
+  // ----------------------------------------------------------------
+  // *************************  获得源  ************************
+  // ----------------------------------------------------------------
+  /**
+   * 获得源 -- 表示模块最终的生成代码的数据源
+   * 
+   * @param {DependencyTemplates[]} dependencyTemplates 依赖模板
+   * @param {Object} outputOptions 输出选项
+   * @param {RequestShortener} requestShortener 请求路径简写器
+   * @returns {CachedSource} 返回可缓存的源
+   * @memberof NormalModule
+   */
+  source(dependencyTemplates, outputOptions, requestShortener) {
+    const hashDigest = this.getHashDigest();
+
+    // 是否读取缓存
+    if (this._cachedSource && this._cachedSource.hash === hashDigest) {
+      return this._cachedSource.source;
+    }
+
+    // 没有原始源 , 抛出异常
+    if (!this._source) {
+      return new RawSource("throw new Error('No source available');");
+    }
+
+    const source = new ReplaceSource(this._source);
+
+    this._cachedSource = {
+      source: source,
+      hash: hashDigest
+    };
+
+    this.sourceBlock(this, [], dependencyTemplates, source, outputOptions, requestShortener);
+
+    return new CachedSource(source);
+  }
+
+  /**
+   * 
+   * 
+   * @param {any} block 
+   * @param {any} availableVars 
+   * @param {any} dependencyTemplates 
+   * @param {any} source 
+   * @param {any} outputOptions 
+   * @param {any} requestShortener 
+   * @memberof NormalModule
+   */
+  sourceBlock(block, availableVars, dependencyTemplates, source, outputOptions, requestShortener) {
+    block.dependencies.forEach((dependency) => this.sourceDependency(
+      dependency, dependencyTemplates, source, outputOptions, requestShortener));
+
+		/**
+		 * Get the variables of all blocks that we need to inject.
+		 * These will contain the variable name and its expression.
+		 * The name will be added as a paramter in a IIFE the expression as its value.
+		 */
+    const vars = block.variables.map((variable) => this.sourceVariables(
+      variable, availableVars, dependencyTemplates, outputOptions, requestShortener))
+      .filter(Boolean);
+
+		/**
+		 * if we actually have variables
+		 * this is important as how #splitVariablesInUniqueNamedChunks works
+		 * it will always return an array in an array which would lead to a IIFE wrapper around
+		 * a module if we do this with an empty vars array.
+		 */
+    if (vars.length > 0) {
+			/**
+			 * Split all variables up into chunks of unique names.
+			 * e.g. imagine you have the following variable names that need to be injected:
+			 * [foo, bar, baz, foo, some, more]
+			 * we can not inject "foo" twice, therefore we just make two IIFEs like so:
+			 * (function(foo, bar, baz){
+			 *   (function(foo, some, more){
+			 *     ...
+			 *   }(...));
+			 * }(...));
+			 *
+			 * "splitVariablesInUniqueNamedChunks" splits the variables shown above up to this:
+			 * [[foo, bar, baz], [foo, some, more]]
+			 */
+      const injectionVariableChunks = this.splitVariablesInUniqueNamedChunks(vars);
+
+      // create all the beginnings of IIFEs
+      const functionWrapperStarts = injectionVariableChunks.map((variableChunk) => variableChunk.map(variable => variable.name))
+        .map(names => this.variableInjectionFunctionWrapperStartCode(names));
+
+      // and all the ends
+      const functionWrapperEnds = injectionVariableChunks.map((variableChunk) => variableChunk.map(variable => variable.expression))
+        .map(expressions => this.variableInjectionFunctionWrapperEndCode(expressions, block));
+
+      // join them to one big string
+      const varStartCode = functionWrapperStarts.join("");
+      // reverse the ends first before joining them, as the last added must be the inner most
+      const varEndCode = functionWrapperEnds.reverse().join("");
+
+      // if we have anything, add it to the source
+      if (varStartCode && varEndCode) {
+        const start = block.range ? block.range[0] : -10;
+        const end = block.range ? block.range[1] : (this._source.size() + 1);
+        source.insert(start + 0.5, varStartCode);
+        source.insert(end + 0.5, "\n/* WEBPACK VAR INJECTION */" + varEndCode);
+      }
+    }
+    block.blocks.forEach((block) => this.sourceBlock(
+      block, availableVars.concat(vars), dependencyTemplates, source, outputOptions, requestShortener));
   }
 
   /**
@@ -553,110 +674,11 @@ class NormalModule extends Module {
     }, startState);
   }
 
-  /**
-   * 
-   * 
-   * @param {any} block 
-   * @param {any} availableVars 
-   * @param {any} dependencyTemplates 
-   * @param {any} source 
-   * @param {any} outputOptions 
-   * @param {any} requestShortener 
-   * @memberof NormalModule
-   */
-  sourceBlock(block, availableVars, dependencyTemplates, source, outputOptions, requestShortener) {
-    block.dependencies.forEach((dependency) => this.sourceDependency(
-      dependency, dependencyTemplates, source, outputOptions, requestShortener));
-
-		/**
-		 * Get the variables of all blocks that we need to inject.
-		 * These will contain the variable name and its expression.
-		 * The name will be added as a paramter in a IIFE the expression as its value.
-		 */
-    const vars = block.variables.map((variable) => this.sourceVariables(
-      variable, availableVars, dependencyTemplates, outputOptions, requestShortener))
-      .filter(Boolean);
-
-		/**
-		 * if we actually have variables
-		 * this is important as how #splitVariablesInUniqueNamedChunks works
-		 * it will always return an array in an array which would lead to a IIFE wrapper around
-		 * a module if we do this with an empty vars array.
-		 */
-    if (vars.length > 0) {
-			/**
-			 * Split all variables up into chunks of unique names.
-			 * e.g. imagine you have the following variable names that need to be injected:
-			 * [foo, bar, baz, foo, some, more]
-			 * we can not inject "foo" twice, therefore we just make two IIFEs like so:
-			 * (function(foo, bar, baz){
-			 *   (function(foo, some, more){
-			 *     ...
-			 *   }(...));
-			 * }(...));
-			 *
-			 * "splitVariablesInUniqueNamedChunks" splits the variables shown above up to this:
-			 * [[foo, bar, baz], [foo, some, more]]
-			 */
-      const injectionVariableChunks = this.splitVariablesInUniqueNamedChunks(vars);
-
-      // create all the beginnings of IIFEs
-      const functionWrapperStarts = injectionVariableChunks.map((variableChunk) => variableChunk.map(variable => variable.name))
-        .map(names => this.variableInjectionFunctionWrapperStartCode(names));
-
-      // and all the ends
-      const functionWrapperEnds = injectionVariableChunks.map((variableChunk) => variableChunk.map(variable => variable.expression))
-        .map(expressions => this.variableInjectionFunctionWrapperEndCode(expressions, block));
-
-      // join them to one big string
-      const varStartCode = functionWrapperStarts.join("");
-      // reverse the ends first before joining them, as the last added must be the inner most
-      const varEndCode = functionWrapperEnds.reverse().join("");
-
-      // if we have anything, add it to the source
-      if (varStartCode && varEndCode) {
-        const start = block.range ? block.range[0] : -10;
-        const end = block.range ? block.range[1] : (this._source.size() + 1);
-        source.insert(start + 0.5, varStartCode);
-        source.insert(end + 0.5, "\n/* WEBPACK VAR INJECTION */" + varEndCode);
-      }
-    }
-    block.blocks.forEach((block) => this.sourceBlock(
-      block, availableVars.concat(vars), dependencyTemplates, source, outputOptions, requestShortener));
-  }
-
-  /**
-   * 
-   * 
-   * @param {any} dependencyTemplates 
-   * @param {any} outputOptions 
-   * @param {any} requestShortener 
-   * @returns 
-   * @memberof NormalModule
-   */
-  source(dependencyTemplates, outputOptions, requestShortener) {
-    const hashDigest = this.getHashDigest();
-    if (this._cachedSource && this._cachedSource.hash === hashDigest) {
-      return this._cachedSource.source;
-    }
-
-    if (!this._source) {
-      return new RawSource("throw new Error('No source available');");
-    }
-
-    const source = new ReplaceSource(this._source);
-    this._cachedSource = {
-      source: source,
-      hash: hashDigest
-    };
-
-    this.sourceBlock(this, [], dependencyTemplates, source, outputOptions, requestShortener);
-    return new CachedSource(source);
-  }
-
   originalSource() {
     return this._source;
   }
+
+
 
   /**
    * 检查模块是否需要重新构建
@@ -699,7 +721,7 @@ class NormalModule extends Module {
    */
   getHighestTimestamp(keys, timestampsByKey) {
     let highestTimestamp = 0;
-    
+
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
       const timestamp = timestampsByKey[key];
