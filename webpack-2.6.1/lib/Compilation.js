@@ -210,7 +210,12 @@ class Compilation extends Tapable {
     this.dependencyTemplates = new Map();
   }
 
-	/**
+
+
+  // ----------------------------------------------------------------
+  // *******************  基于入口块 , 创建依赖图  ********************
+  // ----------------------------------------------------------------
+  /**
 	 * 添加入口依赖
 	 * @param {String} context 上下文路径 ( config.output )
 	 * @param {ModuleDependency} entry 入口模块依赖
@@ -251,24 +256,6 @@ class Compilation extends Tapable {
 
         return callback(null, module);
       });
-  }
-
-	/**
-	 * 预加载指定依赖模块
-	 * @param {String} context 上下文路径
-	 * @param {PrefetchDependency} dependency 预取的依赖 
-	 * @param {Function} callback 回调函数
-	 */
-  prefetch(context, dependency, callback) {
-    this._addModuleChain(
-      context,
-      dependency,
-      function onModule(module) {
-        module.prefetched = true;
-        module.issuer = null;
-      },
-      callback
-    );
   }
 
   /**
@@ -491,13 +478,16 @@ class Compilation extends Tapable {
 
   /**
 	 * 处理模块的依赖
-	 * @param {Module} module 
+	 * @param {Module} module 模块实例
 	 * @param {Function} callback 
 	 */
   processModuleDependencies(module, callback) {
     // 整合的依赖
     const dependencies = [];
 
+    /**
+     * 
+     */
     function addDependency(dep) {
       for (let i = 0; i < dependencies.length; i++) {
         if (dep.isEqualResource(dependencies[i][0])) {
@@ -508,6 +498,11 @@ class Compilation extends Tapable {
       dependencies.push([dep]);
     }
 
+    /**
+     * 
+     * 
+     * @param {any} block 
+     */
     function addDependenciesBlock(block) {
       if (block.dependencies) {
         iterationOfArrayCallback(block.dependencies, addDependency);
@@ -537,11 +532,11 @@ class Compilation extends Tapable {
 	/**
 	 * 
 	 * @param {Module} module 
-	 * @param {S} dependencies 
+	 * @param {Dependency[]} dependencies 
 	 * @param {Boolean} bail 
 	 * @param {String} cacheGroup 
 	 * @param {Boolean} recursive 是否递归
-	 * @param {Function} callback 
+	 * @param {Function} callback 回调函数
 	 */
   addModuleDependencies(module, dependencies, bail, cacheGroup, recursive, callback) {
     let _this = this;
@@ -715,6 +710,26 @@ class Compilation extends Tapable {
 
       return process.nextTick(callback);
     });
+  }
+
+
+
+  /**
+	 * 预加载指定依赖模块
+	 * @param {String} context 上下文路径
+	 * @param {PrefetchDependency} dependency 预取的依赖 
+	 * @param {Function} callback 回调函数
+	 */
+  prefetch(context, dependency, callback) {
+    this._addModuleChain(
+      context,
+      dependency,
+      function onModule(module) {
+        module.prefetched = true;
+        module.issuer = null;
+      },
+      callback
+    );
   }
 
   /**

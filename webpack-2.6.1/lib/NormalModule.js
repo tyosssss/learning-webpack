@@ -407,9 +407,15 @@ class NormalModule extends Module {
     this._source = new RawSource("throw new Error(" + JSON.stringify(this.error.message) + ");");
   }
 
-  // check if module should not be parsed
-  // returns "true" if the module should !not! be parsed
-  // returns "false" if the module !must! be parsed
+  /**
+   * check if module should not be parsed
+   * returns "true" if the module should !not! be parsed
+   * returns "false" if the module !must! be parsed
+   * @param {String|RegExp|RegExp[]} noParseRule 
+   * @param {String} request 
+   * @returns {Boolean} true , 拒绝解析
+   * @memberof NormalModule
+   */
   shouldPreventParsing(noParseRule, request) {
     // if no noParseRule exists, return false
     // the module !must! be parsed.
@@ -436,11 +442,11 @@ class NormalModule extends Module {
   }
 
   /**
+   * 处理noParse的规则
    * 
-   * 
-   * @param {any} rule 
-   * @param {any} content 
-   * @returns 
+   * @param {String|RegExp} rule 
+   * @param {String} content 
+   * @returns {Boolean}
    * @memberof NormalModule
    */
   applyNoParseRule(rule, content) {
