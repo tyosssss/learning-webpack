@@ -54,7 +54,7 @@ module.exports = [
          */
         name: '[name]'
       })
-
+      
       /**
        * 提取策略 : 
        * 

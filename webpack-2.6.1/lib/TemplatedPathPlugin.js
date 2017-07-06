@@ -72,7 +72,7 @@ const withHashLength = (replacer, handlerFn) => {
     if (length && handlerFn) {
       return handlerFn(length);
     }
-
+    
     const hash = replacer.apply(this, arguments);
 
     return length
@@ -83,8 +83,8 @@ const withHashLength = (replacer, handlerFn) => {
 
 /**
  * 获得替换器
- * @param {String} value 
- * @param {Boolean} allowEmpty 
+ * @param {String} value 替换的值
+ * @param {Boolean} allowEmpty 是否允许为空 , true = 值为空是会报错
  * @returns {Function} 返回替换器
  */
 const getReplacer = (value, allowEmpty) => {
@@ -93,7 +93,9 @@ const getReplacer = (value, allowEmpty) => {
     const input = arguments[arguments.length - 1];
 
     if (value === null || value === undefined) {
-      if (!allowEmpty) throw new Error(`Path variable ${match} not implemented in this context: ${input}`);
+      if (!allowEmpty) {
+        throw new Error(`Path variable ${match} not implemented in this context: ${input}`);
+      }
       return "";
     } else {
       return `${value}`;
@@ -118,7 +120,7 @@ class TemplatedPathPlugin {
         const publicPath = outputOptions.publicPath || "";
         const filename = outputOptions.filename || "";
         const chunkFilename = outputOptions.chunkFilename || outputOptions.filename;
-        
+
         if (REGEXP_HASH_FOR_TEST.test(publicPath) || REGEXP_CHUNKHASH_FOR_TEST.test(publicPath) || REGEXP_NAME_FOR_TEST.test(publicPath))
           return true;
         if (REGEXP_HASH_FOR_TEST.test(filename))

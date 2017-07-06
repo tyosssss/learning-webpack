@@ -10,6 +10,9 @@ if(require === 1){
 
 require('./1.js')
 
+
+var a = __abcdefg___;
+
 // require.ensure(['./1.js'],
 //   function(require){
 //     // require("./1.js")

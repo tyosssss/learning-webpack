@@ -53,6 +53,73 @@ module.exports = {
   // },
 
   plugins: [
+    (function () {
+      return {
+        apply(compiler) {
+          compiler.plugin('this-compilation', (compilation, params) => {
+            let { mainTemplate } = compilation
+            const ParserHelpers = require("webpack/lib/ParserHelpers");
+            const ConstDependency = require("webpack/lib/dependencies/ConstDependency")
+            const NullFactory = require("webpack/lib/NullFactory")
+            // const NullDependency = require("webpack/lib/NullDependency");
+
+            // class RequireHeaderDependency11 extends NullDependency {
+            //   constructor(range) {
+            //     super();
+            //     if (!Array.isArray(range)) throw new Error("range must be valid");
+            //     this.range = range;
+            //   }
+            // }
+
+            // RequireHeaderDependency11.Template = class RequireHeaderDependency11 {
+            //   /**
+            //    * 
+            //    * @param {Dependency} dep 
+            //    * @param {ReplaceSource} source 
+            //    */
+            //   apply(dep, source) {
+            //     source.replace(dep.range[0], dep.range[1] - 1, "__webpack_require__");
+            //   }
+
+            //   applyAsTemplateArgument(name, dep, source) {
+            //     source.replace(dep.range[0], dep.range[1] - 1, "require");
+            //   }
+            // };
+
+            compilation.dependencyFactories.set(ConstDependency, new NullFactory());
+            compilation.dependencyTemplates.set(ConstDependency, new ConstDependency.Template());
+
+            params.normalModuleFactory.plugin("parser", parser => {
+              parser.plugin("evaluate Identifier __abcdefg___", function (expr) {
+                if (!this.state.module) return;
+                return ParserHelpers.evaluateToString('哈哈哈')(expr);
+              });
+
+
+              parser.plugin("expression __abcdefg___", function (expr) {
+                if (!this.state.module) return;
+
+                const dep = new ConstDependency(`哈哈哈`, expr.range);
+                dep.loc = expr.loc;
+                this.state.current.addDependency(dep);
+
+                // dep.loc = expr.loc;
+                // parser.state.current.addDependency(dep);
+
+                // 添加变量依赖
+                // this.state.current.ad(
+                //   "__abcdefg___",
+                //   "哈哈哈"
+                // );
+
+                return true;
+              });
+            })
+
+          })
+        }
+      }
+    })()
     // new CleanWebpackPlugin(['build'], {
     //   root: path.resolve(__dirname),
     //   verbose: true,

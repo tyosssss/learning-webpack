@@ -412,11 +412,12 @@ class Chunk {
   }
 
   /**
-   * @param {} includeEntries
-   * @param {} realHash
+   * 获得块与其子块的名称和hash的映射关系
+   * @param {Boolean} includeEntries 是否包含入口块
+   * @param {Boolean} realHash 是否使用原始的hash值
    */
   getChunkMaps(includeEntries, realHash) {
-    const chunksProcessed = [];
+    const chunksProcessed = []; // 存储 正在处理的Chunk , 避免重复处理
     const chunkHashMap = {};
     const chunkNameMap = {};
     
@@ -424,6 +425,8 @@ class Chunk {
       if (chunksProcessed.indexOf(chunk) >= 0) return;
       chunksProcessed.push(chunk);
 
+      // !chunk.hasRuntime() -- 不包含初始块
+      // includeEntries     --- 是否包含入口块
       if (!chunk.hasRuntime() || includeEntries) {
         chunkHashMap[chunk.id] = realHash 
           ? chunk.hash 

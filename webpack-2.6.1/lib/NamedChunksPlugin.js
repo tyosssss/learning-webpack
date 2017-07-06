@@ -4,27 +4,32 @@
 */
 "use strict";
 
+/**
+ * 命名Chunk ID
+ * 
+ * @class NamedChunksPlugin
+ */
 class NamedChunksPlugin {
 
-	static defaultNameResolver(chunk) {
-		return chunk.name || null;
-	}
+  static defaultNameResolver(chunk) {
+    return chunk.name || null;
+  }
 
-	constructor(nameResolver) {
-		this.nameResolver = nameResolver || NamedChunksPlugin.defaultNameResolver;
-	}
+  constructor(nameResolver) {
+    this.nameResolver = nameResolver || NamedChunksPlugin.defaultNameResolver;
+  }
 
-	apply(compiler) {
-		compiler.plugin("compilation", (compilation) => {
-			compilation.plugin("before-chunk-ids", (chunks) => {
-				chunks.forEach((chunk) => {
-					if(chunk.id === null) {
-						chunk.id = this.nameResolver(chunk);
-					}
-				});
-			});
-		});
-	}
+  apply(compiler) {
+    compiler.plugin("compilation", (compilation) => {
+      compilation.plugin("before-chunk-ids", (chunks) => {
+        chunks.forEach((chunk) => {
+          if (chunk.id === null) {
+            chunk.id = this.nameResolver(chunk);
+          }
+        });
+      });
+    });
+  }
 }
 
 module.exports = NamedChunksPlugin;
