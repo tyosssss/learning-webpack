@@ -15,7 +15,7 @@ const RawSource = require("webpack-sources").RawSource;
 class DependenciesBlockVariable {
   /**
    * Creates an instance of DependenciesBlockVariable.
-   * @param {String} name 变量名
+   * @param {String} name 依赖的变量名
    * @param {String} expression 生成变量值的表达式
    * @param {Dependency[]} dependencies 依赖块的变量
    * @memberof DependenciesBlockVariable

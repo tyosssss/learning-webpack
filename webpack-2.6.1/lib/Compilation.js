@@ -42,7 +42,7 @@ function byId(a, b) {
 
 /**
  * 
- * @param {Array} variables 
+ * @param {DependenciesBlockVariable[]} variables 
  * @param {Function} fn 
  */
 function iterationBlockVariable(variables, fn) {
@@ -58,7 +58,7 @@ function iterationBlockVariable(variables, fn) {
 
 /**
  * 遍历数组执行指定函数
- * @param {Array[]} arr 
+ * @param {DependenciesBlock[]} arr 
  * @param {Function} fn 
  */
 function iterationOfArrayCallback(arr, fn) {
@@ -482,11 +482,11 @@ class Compilation extends Tapable {
 	 * @param {Function} callback 
 	 */
   processModuleDependencies(module, callback) {
-    // 整合的依赖
+    // 依赖列表
     const dependencies = [];
 
     /**
-     * 
+     * 将依赖添加到依赖列表中 ( 确保不重复 )
      */
     function addDependency(dep) {
       for (let i = 0; i < dependencies.length; i++) {
@@ -578,9 +578,7 @@ class Compilation extends Tapable {
 
       const factory = item[0];
 
-      //
       // 创建模块
-      //
       factory.create(
         {
           contextInfo: {
@@ -712,26 +710,6 @@ class Compilation extends Tapable {
     });
   }
 
-
-
-  /**
-	 * 预加载指定依赖模块
-	 * @param {String} context 上下文路径
-	 * @param {PrefetchDependency} dependency 预取的依赖 
-	 * @param {Function} callback 回调函数
-	 */
-  prefetch(context, dependency, callback) {
-    this._addModuleChain(
-      context,
-      dependency,
-      function onModule(module) {
-        module.prefetched = true;
-        module.issuer = null;
-      },
-      callback
-    );
-  }
-
   /**
    * 
    * 
@@ -773,29 +751,6 @@ class Compilation extends Tapable {
       });
 
     });
-  }
-
-  /**
-   * 
-   * 
-   * @returns 
-   * 
-   * @memberof Compilation
-   */
-  getStats() {
-    return new Stats(this);
-  }
-
-  /**
-   * 
-   * 
-   * @param {any} name 
-   * @param {any} fn 
-   * @memberof Compilation
-   */
-  templatesPlugin(name, fn) {
-    this.mainTemplate.plugin(name, fn);
-    this.chunkTemplate.plugin(name, fn);
   }
 
 	/**
@@ -882,17 +837,15 @@ class Compilation extends Tapable {
   }
 
   /**
+   * 根据标识查找模块实例
    * 
-   * 
-   * @param {any} identifier 
-   * @returns 
+   * @param {String} identifier 标识
+   * @returns {Module} 返回模块实例
    * @memberof Compilation
    */
   findModule(identifier) {
     return this._modules[identifier];
   }
-
-
 
   /**
    * 编译完成 -- 发出事件 , 记录错误和警告信息
@@ -1866,6 +1819,49 @@ class Compilation extends Tapable {
         throw new Error(`checkConstraints: duplicate chunk in compilation ${chunk.debugId}`);
       chunk.checkConstraints();
     }
+  }
+
+
+
+  /**
+	 * 预加载指定依赖模块
+	 * @param {String} context 上下文路径
+	 * @param {PrefetchDependency} dependency 预取的依赖 
+	 * @param {Function} callback 回调函数
+	 */
+  prefetch(context, dependency, callback) {
+    this._addModuleChain(
+      context,
+      dependency,
+      function onModule(module) {
+        module.prefetched = true;
+        module.issuer = null;
+      },
+      callback
+    );
+  }
+
+  /**
+   * 
+   * 
+   * @returns 
+   * 
+   * @memberof Compilation
+   */
+  getStats() {
+    return new Stats(this);
+  }
+
+  /**
+   * 
+   * 
+   * @param {any} name 
+   * @param {any} fn 
+   * @memberof Compilation
+   */
+  templatesPlugin(name, fn) {
+    this.mainTemplate.plugin(name, fn);
+    this.chunkTemplate.plugin(name, fn);
   }
 }
 

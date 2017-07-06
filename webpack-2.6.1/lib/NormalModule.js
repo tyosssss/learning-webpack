@@ -199,7 +199,7 @@ class NormalModule extends Module {
       // if we have an error mark module as failed and exit
       if (err) {
         this.markModuleAsErrored(err);
-        
+
         return callback();
       }
 
@@ -267,7 +267,7 @@ class NormalModule extends Module {
        * @param {String} result.result[1] 原始内容的映射
        */
       (err, result) => {
-        
+
         if (result) {
           this.cacheable = result.cacheable;
           this.fileDependencies = result.fileDependencies;
@@ -460,37 +460,23 @@ class NormalModule extends Module {
 
 
 
-  /**
-   * 获得hash签名 ( 内容签名 )
-   * 
-   * @returns {String}
-   * @memberof NormalModule
-   */
-  getHashDigest() {
-    const hash = crypto.createHash("md5");
-    this.updateHash(hash);
-
-    return hash.digest("hex");
-  }
-
-
-
   // ----------------------------------------------------------------
   // *************************  获得源  ************************
   // ----------------------------------------------------------------
   /**
    * 获得源 -- 表示模块最终的生成代码的数据源
    * 
-   * @param {DependencyTemplates[]} dependencyTemplates 依赖模板
+   * @param {DependencyTemplates[]} dependencyTemplates 依赖模板实例
    * @param {Object} outputOptions 输出选项
    * @param {RequestShortener} requestShortener 请求路径简写器
    * @returns {CachedSource} 返回可缓存的源
    * @memberof NormalModule
    */
   source(dependencyTemplates, outputOptions, requestShortener) {
+    // hash签名
     const hashDigest = this.getHashDigest();
 
-    // 是否读取缓存
+    // 缓存有效 ( hash没有变化 , 即内容没有变化 ) 
     if (this._cachedSource && this._cachedSource.hash === hashDigest) {
       return this._cachedSource.source;
     }
@@ -515,25 +501,46 @@ class NormalModule extends Module {
   /**
    * 
    * 
-   * @param {any} block 
-   * @param {any} availableVars 
-   * @param {any} dependencyTemplates 
-   * @param {any} source 
-   * @param {any} outputOptions 
-   * @param {any} requestShortener 
+   * @param {DependeciesBlock} block 依赖块
+   * @param {DependeciesBlockVariable[]} availableVars 有效的变量
+   * @param {DependencyTemplates[]} dependencyTemplates 依赖模板实例 
+   * @param {RawSource} source 源
+   * @param {Object} outputOptions 输出选项
+   * @param {RequestShortener} requestShortener 请求路径简写器
    * @memberof NormalModule
    */
   sourceBlock(block, availableVars, dependencyTemplates, source, outputOptions, requestShortener) {
-    block.dependencies.forEach((dependency) => this.sourceDependency(
-      dependency, dependencyTemplates, source, outputOptions, requestShortener));
+    //
+    // render dependencies
+    //
+    block.dependencies.forEach((dependency) =>
+      this.sourceDependency(
+        dependency,
+        dependencyTemplates,
+        source,
+        outputOptions,
+        requestShortener
+      )
+    );
 
+
+
+    //
+    //
+    //
 		/**
 		 * Get the variables of all blocks that we need to inject.
 		 * These will contain the variable name and its expression.
 		 * The name will be added as a paramter in a IIFE the expression as its value.
 		 */
-    const vars = block.variables.map((variable) => this.sourceVariables(
-      variable, availableVars, dependencyTemplates, outputOptions, requestShortener))
+    const vars = block.variables.map(
+      (variable) => this.sourceVariables(
+        variable,
+        availableVars,
+        dependencyTemplates,
+        outputOptions,
+        requestShortener
+      ))
       .filter(Boolean);
 
 		/**
@@ -580,35 +587,53 @@ class NormalModule extends Module {
         source.insert(end + 0.5, "\n/* WEBPACK VAR INJECTION */" + varEndCode);
       }
     }
-    block.blocks.forEach((block) => this.sourceBlock(
-      block, availableVars.concat(vars), dependencyTemplates, source, outputOptions, requestShortener));
+
+
+
+    //
+    //
+    //
+    block.blocks.forEach((block) =>
+      this.sourceBlock(
+        block,
+        availableVars.concat(vars),
+        dependencyTemplates,
+        source,
+        outputOptions,
+        requestShortener
+      )
+    );
   }
 
   /**
-   * 
-   * 
-   * @param {any} dependency 
-   * @param {any} dependencyTemplates 
-   * @param {any} source 
-   * @param {any} outputOptions 
-   * @param {any} requestShortener 
+   * 生成依赖实例的最终代码 , 并将其插入到源source中
+   * @param {Dependency} dependency 依赖实例
+   * @param {DependencyTemplates[]} dependencyTemplates 依赖模板实例 
+   * @param {RawSource} source 源
+   * @param {Object} outputOptions 输出选项
+   * @param {RequestShortener} requestShortener 请求路径简写器
    * @memberof NormalModule
    */
   sourceDependency(dependency, dependencyTemplates, source, outputOptions, requestShortener) {
     const template = dependencyTemplates.get(dependency.constructor);
-    if (!template) throw new Error("No template for dependency: " + dependency.constructor.name);
+
+    if (!template) {
+      throw new Error("No template for dependency: " + dependency.constructor.name);
+    }
+
+    // 通过依赖模块 , 生成依赖实例的最终代码
     template.apply(dependency, source, outputOptions, requestShortener, dependencyTemplates);
   }
 
   /**
+   * 生成XXXX的最终代码 , 并将其插入到源source中
    * 
-   * 
-   * @param {any} variable 
-   * @param {any} availableVars 
-   * @param {any} dependencyTemplates 
-   * @param {any} outputOptions 
-   * @param {any} requestShortener 
-   * @returns 
+   * @param {DependenciesBlockVariable} variable 
+   * @param {DependeciesBlockVariable[]} availableVars 有效的变量
+   * @param {DependencyTemplates[]} dependencyTemplates 依赖模板实例 
+   * @param {RawSource} source 源
+   * @param {Object} outputOptions 输出选项
+   * @param {RequestShortener} requestShortener 请求路径简写器
    * @memberof NormalModule
    */
   sourceVariables(variable, availableVars, dependencyTemplates, outputOptions, requestShortener) {
@@ -618,6 +643,7 @@ class NormalModule extends Module {
     if (availableVars.some(v => v.name === name && v.expression.source() === expr.source())) {
       return;
     }
+
     return {
       name: name,
       expression: expr
@@ -659,6 +685,10 @@ class NormalModule extends Module {
     return `}.call(${firstParam}, ${furtherParams}))`;
   }
 
+  /**
+   * 
+   * @param {*} vars 
+   */
   splitVariablesInUniqueNamedChunks(vars) {
     const startState = [
       []
@@ -680,11 +710,15 @@ class NormalModule extends Module {
     }, startState);
   }
 
+
+
+  /**
+   * 获得原始的源 ( 没有render之前的 )
+   * @returns {Source}
+   */
   originalSource() {
     return this._source;
   }
-
-
 
   /**
    * 检查模块是否需要重新构建
@@ -750,6 +784,29 @@ class NormalModule extends Module {
   }
 
   /**
+   * 获得hash签名 ( 内容签名 )
+   * 
+   * @returns {String}
+   * @memberof NormalModule
+   */
+  getHashDigest() {
+    const hash = crypto.createHash("md5");
+    this.updateHash(hash);
+
+    return hash.digest("hex");
+  }
+  
+  /**
+   * 
+   * @param {*} hash 
+   */
+  updateHash(hash) {
+    this.updateHashWithSource(hash);
+    this.updateHashWithMeta(hash);
+    super.updateHash(hash);
+  }
+
+  /**
    * 
    * 
    * @param {any} hash 
@@ -765,17 +822,14 @@ class NormalModule extends Module {
     this._source.updateHash(hash);
   }
 
+  /**
+   * 
+   * @param {*} hash 
+   */
   updateHashWithMeta(hash) {
     hash.update("meta");
     hash.update(JSON.stringify(this.meta));
   }
-
-  updateHash(hash) {
-    this.updateHashWithSource(hash);
-    this.updateHashWithMeta(hash);
-    super.updateHash(hash);
-  }
-
 }
 
 module.exports = NormalModule;

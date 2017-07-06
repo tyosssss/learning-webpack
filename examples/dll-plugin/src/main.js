@@ -1,17 +1,20 @@
+
+var a = __filename;
+
 // var a = b;
-var a = 2;
+// var a = 2;
 
-if(require === 1){
-  // return 1
-  b = 123
-}else{
-  b= 23
-}
+// if(require === 1){
+//   // return 1
+//   b = 123
+// }else{
+//   b= 23
+// }
 
-require('./1.js')
+// require('./1.js')
 
 
-var a = __abcdefg___;
+// var a = __abcdefg___;
 
 // require.ensure(['./1.js'],
 //   function(require){
