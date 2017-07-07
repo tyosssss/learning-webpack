@@ -19,9 +19,9 @@ const fn = (function () {
 
 // applyPlugins
 tapable.plugin('event', fn('a', 500))
-tapable.plugin('event', fn('b', 100))
-tapable.plugin('event', fn('c', 500))
-tapable.plugin('event', fn('d', 300, true))
+tapable.plugin('event', fn('b', 100,true))
+tapable.plugin('event', fn('c', 500,true))
+tapable.plugin('event', fn('d', 300))
 tapable.plugin('event', fn('f', 200))
 tapable.plugin('event', fn('e', 100))
 tapable.applyPluginsAsyncSeriesBailResult('event', function (err, result) {

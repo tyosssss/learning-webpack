@@ -133,7 +133,7 @@ class NormalModule extends Module {
   }
 
   /**
-   * 获得模块名
+   * 获得模块名 ( 返回不包含查询字符串的资源路径 )
    * 
    * @returns {String}
    * @memberof NormalModule
@@ -502,7 +502,7 @@ class NormalModule extends Module {
    * 
    * 
    * @param {DependeciesBlock} block 依赖块
-   * @param {DependeciesBlockVariable[]} availableVars 有效的变量
+   * @param {DependeciesBlockVariable[]} availableVars 有效的依赖块变量
    * @param {DependencyTemplates[]} dependencyTemplates 依赖模板实例 
    * @param {RawSource} source 源
    * @param {Object} outputOptions 输出选项
@@ -526,13 +526,11 @@ class NormalModule extends Module {
 
 
     //
+    // render dependenciesBlock
+    // 获得需要注入的依赖块变量
+    // name  -- 作为函数的形参
+    // value -- 作为函数的实参
     //
-    //
-		/**
-		 * Get the variables of all blocks that we need to inject.
-		 * These will contain the variable name and its expression.
-		 * The name will be added as a paramter in a IIFE the expression as its value.
-		 */
     const vars = block.variables.map(
       (variable) => this.sourceVariables(
         variable,
@@ -567,11 +565,13 @@ class NormalModule extends Module {
       const injectionVariableChunks = this.splitVariablesInUniqueNamedChunks(vars);
 
       // create all the beginnings of IIFEs
-      const functionWrapperStarts = injectionVariableChunks.map((variableChunk) => variableChunk.map(variable => variable.name))
+      const functionWrapperStarts = injectionVariableChunks
+        .map(variableChunk => variableChunk.map(variable => variable.name))
         .map(names => this.variableInjectionFunctionWrapperStartCode(names));
 
       // and all the ends
-      const functionWrapperEnds = injectionVariableChunks.map((variableChunk) => variableChunk.map(variable => variable.expression))
+      const functionWrapperEnds = injectionVariableChunks
+        .map(variableChunk => variableChunk.map(variable => variable.expression))
         .map(expressions => this.variableInjectionFunctionWrapperEndCode(expressions, block));
 
       // join them to one big string
@@ -591,7 +591,7 @@ class NormalModule extends Module {
 
 
     //
-    //
+    // render 异步块
     //
     block.blocks.forEach((block) =>
       this.sourceBlock(
@@ -626,21 +626,25 @@ class NormalModule extends Module {
   }
 
   /**
-   * 生成XXXX的最终代码 , 并将其插入到源source中
+   * 生成依赖块变量的最终代码 , 并将其插入到源source中
    * 
    * @param {DependenciesBlockVariable} variable 
-   * @param {DependeciesBlockVariable[]} availableVars 有效的变量
+   * @param {DependeciesBlockVariable[]} availableVars 有效的依赖块变量
    * @param {DependencyTemplates[]} dependencyTemplates 依赖模板实例 
    * @param {RawSource} source 源
    * @param {Object} outputOptions 输出选项
    * @param {RequestShortener} requestShortener 请求路径简写器
+   * @returns {Object} 返回变量 {name,expression}
    * @memberof NormalModule
    */
   sourceVariables(variable, availableVars, dependencyTemplates, outputOptions, requestShortener) {
     const name = variable.name;
     const expr = variable.expressionSource(dependencyTemplates, outputOptions, requestShortener);
 
-    if (availableVars.some(v => v.name === name && v.expression.source() === expr.source())) {
+    if (availableVars.some(v =>
+      v.name === name &&
+      v.expression.source() === expr.source())
+    ) {
       return;
     }
 
@@ -648,6 +652,34 @@ class NormalModule extends Module {
       name: name,
       expression: expr
     };
+  }
+
+  /**
+   * 
+   * @param {Object[]} vars 
+   */
+  splitVariablesInUniqueNamedChunks(vars) {
+    const startState = [
+      []
+    ];
+
+    return vars.reduce((chunks, variable) => {
+      const current = chunks[chunks.length - 1];
+      
+      // check if variable with same name exists already
+      // if so create a new chunk of variables.
+      const variableNameAlreadyExists = current.some(v => v.name === variable.name);
+
+      if (variableNameAlreadyExists) {
+        // start new chunk with current variable
+        chunks.push([variable]);
+      } else {
+        // else add it to current chunk
+        current.push(variable);
+      }
+
+      return chunks;
+    }, startState);
   }
 
 	/*
@@ -658,20 +690,6 @@ class NormalModule extends Module {
   variableInjectionFunctionWrapperStartCode(varNames) {
     const args = varNames.join(", ");
     return `/* WEBPACK VAR INJECTION */(function(${args}) {`;
-  }
-
-  /**
-   * 
-   * 
-   * @param {any} block 
-   * @returns 
-   * @memberof NormalModule
-   */
-  contextArgument(block) {
-    if (this === block) {
-      return this.exportsArgument || "exports";
-    }
-    return "this";
   }
 
 	/*
@@ -687,27 +705,17 @@ class NormalModule extends Module {
 
   /**
    * 
-   * @param {*} vars 
+   * 
+   * @param {any} block 
+   * @returns 
+   * @memberof NormalModule
    */
-  splitVariablesInUniqueNamedChunks(vars) {
-    const startState = [
-      []
-    ];
-    return vars.reduce((chunks, variable) => {
-      const current = chunks[chunks.length - 1];
-      // check if variable with same name exists already
-      // if so create a new chunk of variables.
-      const variableNameAlreadyExists = current.some(v => v.name === variable.name);
-
-      if (variableNameAlreadyExists) {
-        // start new chunk with current variable
-        chunks.push([variable]);
-      } else {
-        // else add it to current chunk
-        current.push(variable);
-      }
-      return chunks;
-    }, startState);
+  contextArgument(block) {
+    if (this === block) {
+      return this.exportsArgument || "exports";
+    }
+    
+    return "this";
   }
 
 
@@ -795,7 +803,7 @@ class NormalModule extends Module {
 
     return hash.digest("hex");
   }
-  
+
   /**
    * 
    * @param {*} hash 

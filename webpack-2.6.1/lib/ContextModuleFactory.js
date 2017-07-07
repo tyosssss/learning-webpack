@@ -18,6 +18,12 @@ module.exports = ContextModuleFactory;
 ContextModuleFactory.prototype = Object.create(Tapable.prototype);
 ContextModuleFactory.prototype.constructor = ContextModuleFactory;
 
+/**
+ * 创建模块实例
+ * 
+ * @param {ModuleInfo} data 模块信息
+ * @param {Function} callback 当创建完成时触发 (err,module:Module)=>void
+ */
 ContextModuleFactory.prototype.create = function (data, callback) {
   var module = this;
   var context = data.context;
@@ -94,7 +100,15 @@ ContextModuleFactory.prototype.create = function (data, callback) {
         // Ignored
         if (!result) return callback();
 
-        return callback(null, new ContextModule(result.resolveDependencies, result.resource, result.recursive, result.regExp, result.loaders, result.async, dependency.chunkName));
+        return callback(null, new ContextModule(
+          result.resolveDependencies,
+          result.resource,
+          result.recursive,
+          result.regExp,
+          result.loaders,
+          result.async,
+          dependency.chunkName
+        ));
       });
     });
   });

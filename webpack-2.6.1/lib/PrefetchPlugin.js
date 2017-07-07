@@ -11,7 +11,6 @@ const PrefetchDependency = require("./dependencies/PrefetchDependency");
  * @class PrefetchPlugin
  */
 class PrefetchPlugin {
-
   constructor(context, request) {
     if (!request) {
       this.request = context;
@@ -36,6 +35,6 @@ class PrefetchPlugin {
       );
     });
   }
-
 }
+
 module.exports = PrefetchPlugin;

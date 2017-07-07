@@ -11,7 +11,6 @@ const RawModule = require("./RawModule");
 const Parser = require("./Parser");
 const RuleSet = require("./RuleSet");
 
-
 /**
  * 模块数据
  * @typedef {Object} ModuleInfo

@@ -499,24 +499,29 @@ class Compilation extends Tapable {
     }
 
     /**
+     * 找出依赖块的所有依赖
      * 
-     * 
-     * @param {any} block 
+     * @param {DependenciesBlock[]} block 
      */
     function addDependenciesBlock(block) {
+      // 找出block中 , 所有的依赖
       if (block.dependencies) {
+        // forEach
         iterationOfArrayCallback(block.dependencies, addDependency);
       }
 
+      // 递归找出block中 , 所有的依赖块中所有依赖
       if (block.blocks) {
         iterationOfArrayCallback(block.blocks, addDependenciesBlock);
       }
 
+      // 找出block中 , 所有依赖块变量中的所有依赖
       if (block.variables) {
         iterationBlockVariable(block.variables, addDependency);
       }
     }
 
+    // 找出module中的所有依赖
     addDependenciesBlock(module);
 
     this.addModuleDependencies(
@@ -531,10 +536,10 @@ class Compilation extends Tapable {
 
 	/**
 	 * 
-	 * @param {Module} module 
-	 * @param {Dependency[]} dependencies 
-	 * @param {Boolean} bail 
-	 * @param {String} cacheGroup 
+	 * @param {Module} module 模块实例
+	 * @param {Dependency[]} dependencies 模块中出现的所有依赖实例
+	 * @param {Boolean} bail 是否中断
+	 * @param {String} cacheGroup 缓存组名
 	 * @param {Boolean} recursive 是否递归
 	 * @param {Function} callback 回调函数
 	 */
@@ -543,171 +548,196 @@ class Compilation extends Tapable {
     const start = _this.profile && Date.now();
 
     //
-    // 获得依赖对应的模块工厂
-    //
+    // 获得依赖对应的所有工厂实例
+    // Tuple[Factory , Dependency]
+    // 
     const factories = [];
     for (let i = 0; i < dependencies.length; i++) {
       const factory = _this.dependencyFactories.get(dependencies[i][0].constructor);
+
       if (!factory) {
         return callback(new Error(`No module factory available for dependency type: ${dependencies[i][0].constructor.name}`));
       }
+
       factories[i] = [factory, dependencies[i]];
     }
 
+    // 
+    // 并发构建依赖实例
     //
-    // 并发构建所有模块
-    //
-    asyncLib.forEach(factories, function iteratorFactory(item, callback) {
-      const dependencies = item[1];
+    asyncLib.forEach(
+      factories,
+      function iteratorFactory(item, callback) {
+        const dependencies = item[1];
 
-      const errorAndCallback = function errorAndCallback(err) {
-        err.origin = module;
-        _this.errors.push(err);
-        if (bail) {
-          callback(err);
-        } else {
+        // 处理错误 , 并执行回调
+        const errorAndCallback = function errorAndCallback(err) {
+          err.origin = module;
+          _this.errors.push(err);
+
+          if (bail) {
+            callback(err);
+          } else {
+            callback();
+          }
+        };
+
+        // 处理警告 , 并执行回调
+        const warningAndCallback = function warningAndCallback(err) {
+          err.origin = module;
+          _this.warnings.push(err);
           callback();
-        }
-      };
+        };
 
-      const warningAndCallback = function warningAndCallback(err) {
-        err.origin = module;
-        _this.warnings.push(err);
-        callback();
-      };
+        // factory 实例
+        const factory = item[0];
 
-      const factory = item[0];
-
-      // 创建模块
-      factory.create(
-        {
-          contextInfo: {
-            issuer: module.nameForCondition && module.nameForCondition(),
-            compiler: _this.compiler.name
+        // 创建模块
+        factory.create(
+          {
+            contextInfo: {
+              issuer: module.nameForCondition && module.nameForCondition(),
+              compiler: _this.compiler.name
+            },
+            context: module.context,
+            dependencies: dependencies
           },
-          context: module.context,
-          dependencies: dependencies
-        },
-        function factoryCallback(err, dependentModule) {
-          let afterFactory;
+          function factoryCallback(err, dependentModule) {
+            let afterFactory;
 
-          function isOptional() {
-            return dependencies.filter(d => !d.optional).length === 0;
-          }
-
-          function errorOrWarningAndCallback(err) {
-            if (isOptional()) {
-              return warningAndCallback(err);
-            } else {
-              return errorAndCallback(err);
-            }
-          }
-
-          function iterationDependencies(depend) {
-            for (let index = 0; index < depend.length; index++) {
-              const dep = depend[index];
-              dep.module = dependentModule;
-              dependentModule.addReason(module, dep);
-            }
-          }
-
-          if (err) {
-            return errorOrWarningAndCallback(new ModuleNotFoundError(module, err, dependencies));
-          }
-          if (!dependentModule) {
-            return process.nextTick(callback);
-          }
-          if (_this.profile) {
-            if (!dependentModule.profile) {
-              dependentModule.profile = {};
-            }
-            afterFactory = Date.now();
-            dependentModule.profile.factory = afterFactory - start;
-          }
-
-          dependentModule.issuer = module;
-          const newModule = _this.addModule(dependentModule, cacheGroup);
-
-          if (!newModule) { // from cache
-            dependentModule = _this.getModule(dependentModule);
-
-            if (dependentModule.optional) {
-              dependentModule.optional = isOptional();
+            // 是否包含可选的依赖
+            function isOptional() {
+              return dependencies.filter(d => !d.optional).length === 0;
             }
 
-            iterationDependencies(dependencies);
-
-            if (_this.profile) {
-              if (!module.profile) {
-                module.profile = {};
-              }
-              const time = Date.now() - start;
-              if (!module.profile.dependencies || time > module.profile.dependencies) {
-                module.profile.dependencies = time;
+            // 处理错误或异常
+            function errorOrWarningAndCallback(err) {
+              if (isOptional()) {
+                return warningAndCallback(err);
+              } else {
+                return errorAndCallback(err);
               }
             }
 
-            return process.nextTick(callback);
-          }
-
-          if (newModule instanceof Module) {
-            if (_this.profile) {
-              newModule.profile = dependentModule.profile;
+            // 
+            function iterationDependencies(depend) {
+              for (let index = 0; index < depend.length; index++) {
+                const dep = depend[index];
+                dep.module = dependentModule;
+                dependentModule.addReason(module, dep);
+              }
             }
 
-            newModule.optional = isOptional();
-            newModule.issuer = dependentModule.issuer;
-            dependentModule = newModule;
-
-            iterationDependencies(dependencies);
-
-            if (_this.profile) {
-              const afterBuilding = Date.now();
-              module.profile.building = afterBuilding - afterFactory;
+            // 发生错误 , 处理 && 回调函数
+            if (err) {
+              return errorOrWarningAndCallback(new ModuleNotFoundError(module, err, dependencies));
             }
-
-            if (recursive) {
-              return process.nextTick(_this.processModuleDependencies.bind(_this, dependentModule, callback));
-            } else {
+            
+            // 模块被忽略或非模块依赖 , 直接跳过后续处理
+            if (!dependentModule) {
               return process.nextTick(callback);
             }
-          }
 
-          dependentModule.optional = isOptional();
-
-          iterationDependencies(dependencies);
-
-          _this.buildModule(dependentModule, isOptional(), module, dependencies, err => {
-            if (err) {
-              return errorOrWarningAndCallback(err);
-            }
-
+            // 记录性能信息
             if (_this.profile) {
-              const afterBuilding = Date.now();
-              dependentModule.profile.building = afterBuilding - afterFactory;
+              if (!dependentModule.profile) {
+                dependentModule.profile = {};
+              }
+              afterFactory = Date.now();
+              dependentModule.profile.factory = afterFactory - start;
             }
 
-            if (recursive) {
-              _this.processModuleDependencies(dependentModule, callback);
-            } else {
-              return callback();
+            // 设置模块的引用者
+            dependentModule.issuer = module;
+
+            // 尝试将模块实例添加到模块队列 , 如果已存在 , 则从缓存中读取构建好的模块实例
+            const newModule = _this.addModule(dependentModule, cacheGroup);
+
+            // newModule = false 
+            // 模块实例来自 , 模块已构建 , 无需构建
+            if (!newModule) { 
+              // 从缓存中获得实例
+              dependentModule = _this.getModule(dependentModule);
+
+              if (dependentModule.optional) {
+                dependentModule.optional = isOptional();
+              }
+
+              iterationDependencies(dependencies);
+
+              if (_this.profile) {
+                if (!module.profile) {
+                  module.profile = {};
+                }
+                const time = Date.now() - start;
+                if (!module.profile.dependencies || time > module.profile.dependencies) {
+                  module.profile.dependencies = time;
+                }
+              }
+
+              return process.nextTick(callback);
             }
+
+            if (newModule instanceof Module) {
+              if (_this.profile) {
+                newModule.profile = dependentModule.profile;
+              }
+
+              newModule.optional = isOptional();
+              newModule.issuer = dependentModule.issuer;
+              dependentModule = newModule;
+
+              iterationDependencies(dependencies);
+
+              if (_this.profile) {
+                const afterBuilding = Date.now();
+                module.profile.building = afterBuilding - afterFactory;
+              }
+
+              if (recursive) {
+                return process.nextTick(_this.processModuleDependencies.bind(_this, dependentModule, callback));
+              } else {
+                return process.nextTick(callback);
+              }
+            }
+
+            dependentModule.optional = isOptional();
+
+            iterationDependencies(dependencies);
+
+            _this.buildModule(dependentModule, isOptional(), module, dependencies, err => {
+              if (err) {
+                return errorOrWarningAndCallback(err);
+              }
+
+              if (_this.profile) {
+                const afterBuilding = Date.now();
+                dependentModule.profile.building = afterBuilding - afterFactory;
+              }
+
+              if (recursive) {
+                _this.processModuleDependencies(dependentModule, callback);
+              } else {
+                return callback();
+              }
+            });
+
           });
+      },
+      function finalCallbackAddModuleDependencies(err) {
+        // In V8, the Error objects keep a reference to the functions on the stack. These warnings &
+        // errors are created inside closures that keep a reference to the Compilation, so errors are
+        // leaking the Compilation object. Setting _this to null workarounds the following issue in V8.
+        // https://bugs.chromium.org/p/chromium/issues/detail?id=612191
+        _this = null;
 
-        });
-    }, function finalCallbackAddModuleDependencies(err) {
-      // In V8, the Error objects keep a reference to the functions on the stack. These warnings &
-      // errors are created inside closures that keep a reference to the Compilation, so errors are
-      // leaking the Compilation object. Setting _this to null workarounds the following issue in V8.
-      // https://bugs.chromium.org/p/chromium/issues/detail?id=612191
-      _this = null;
+        if (err) {
+          return callback(err);
+        }
 
-      if (err) {
-        return callback(err);
+        return process.nextTick(callback);
       }
-
-      return process.nextTick(callback);
-    });
+    );
   }
 
   /**

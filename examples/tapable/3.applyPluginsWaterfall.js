@@ -17,4 +17,4 @@ tapable.plugin('event', fn('a', a => a + a))
 tapable.plugin('event', fn('b', a => a * 2))
 tapable.plugin('event', fn('c', a => a * a))
 
-console.log('\r\nresult : ' + tapable.applyPluginsWaterfall('event'))
+console.log('\r\nresult : ' + tapable.applyPluginsWaterfall('event', 1))

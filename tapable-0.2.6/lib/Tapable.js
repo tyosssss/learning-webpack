@@ -58,7 +58,8 @@ function rest(arrayLike, n) {
  */
 function Tapable() {
   /**
-   * @property {Object} 事件集合
+   * 事件集合
+   * @type {Map<eventName : String , listeners : Function[]>} 
    * 
    * {
    *  plugin1 : [fn1 , fn2 , ...] ,
@@ -79,7 +80,7 @@ Tapable.mixin = function mixinTapable(pt) {
 };
 
 /**
- * 发布事件
+ * 发布事件 -- 按订阅顺序依次执行处理函数
  * 
  * sync/async : sync
  * 
@@ -137,7 +138,7 @@ function _applyPlugins(name, context, args) {
     return;
   }
 
-  plugins.forEach(p => p.apply(context, [args]))
+  plugins.forEach(function (p) { p.apply(context, [args]) })
 }
 
 
@@ -244,16 +245,25 @@ Tapable.prototype.applyPluginsAsyncSeries = Tapable.prototype.applyPluginsAsync 
   var args = Array.prototype.slice.call(arguments, 1);
   var callback = args.pop();
   var plugins = this._plugins[name];
-  if (!plugins || plugins.length === 0) return callback();
+
+  if (!plugins || plugins.length === 0) {
+    return callback();
+  }
 
   var i = 0;
   var _this = this;
+
   var next = copyProperties(callback, function next(err) {
-    if (err) return callback(err);
+    if (err) {
+      return callback(err);
+    }
+
     i++;
+
     if (i >= plugins.length) {
       return callback();
     }
+
     plugins[i].apply(_this, args);
   })
 
@@ -299,19 +309,24 @@ Tapable.prototype.applyPluginsAsyncSeries1 = function applyPluginsAsyncSeries1(n
 Tapable.prototype.applyPluginsAsyncSeriesBailResult = function applyPluginsAsyncSeriesBailResult(name) {
   var args = Array.prototype.slice.call(arguments, 1);
   var callback = args.pop();
-  if (!this._plugins[name] || this._plugins[name].length === 0) return callback();
+
+  if (!this._plugins[name] || this._plugins[name].length === 0) {
+    return callback();
+  }
+
   var plugins = this._plugins[name];
   var i = 0;
   var _this = this;
 
   args.push(copyProperties(callback, function next() {
-
+    // 有参数返回 , 调用回调函数
     if (arguments.length > 0) {
       return callback.apply(null, arguments);
     }
 
     i++;
 
+    // 执行结束 , 触发回调函数
     if (i >= plugins.length) {
       return callback();
     }
@@ -392,9 +407,14 @@ Tapable.prototype.applyPluginsAsyncWaterfall = function applyPluginsAsyncWaterfa
 Tapable.prototype.applyPluginsParallel = function applyPluginsParallel(name) {
   var args = Array.prototype.slice.call(arguments, 1);
   var callback = args.pop();
-  if (!this._plugins[name] || this._plugins[name].length === 0) return callback();
+
+  if (!this._plugins[name] || this._plugins[name].length === 0) {
+    return callback();
+  }
+
   var plugins = this._plugins[name];
   var remaining = plugins.length;
+
   args.push(copyProperties(callback, function (err) {
     if (remaining < 0)
       return; // ignore
@@ -405,13 +425,18 @@ Tapable.prototype.applyPluginsParallel = function applyPluginsParallel(name) {
     }
 
     remaining--;
+
     if (remaining === 0) {
       return callback();
     }
   }));
+
   for (var i = 0; i < plugins.length; i++) {
     plugins[i].apply(this, args);
-    if (remaining < 0) return;
+    
+    if (remaining < 0) {
+      return;
+    }
   }
 };
 

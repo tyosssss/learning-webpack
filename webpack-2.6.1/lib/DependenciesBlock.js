@@ -68,7 +68,7 @@ class DependenciesBlock {
 
 	/**
 	 * 向块中添加依赖
-	 * @param {Dependency} dependency 依赖
+	 * @param {Dependency} dependency 依赖的实例
 	 */
   addDependency(dependency) {
     this.dependencies.push(dependency);

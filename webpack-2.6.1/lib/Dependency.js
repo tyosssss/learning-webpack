@@ -5,57 +5,62 @@
 "use strict";
 const compareLocations = require("./compareLocations");
 
+/**
+ * 依赖
+ * 
+ * @class Dependency
+ */
 class Dependency {
-	constructor() {
-		this.module = null;
-	}
+  constructor() {
+    this.module = null;
+  }
 
 	/**
 	 * 判断两个资源是否相等
 	 */
-	isEqualResource() {
-		return false;
-	}
+  isEqualResource() {
+    return false;
+  }
 
 	/**
 	 * Returns the referenced module and export
 	 * @returns {Object} {module , importedNames }
 	 */
-	getReference() {
-		if(!this.module) 
-			return null;
-		
-		return {
-			module: this.module,
-			importedNames: true, // true: full object, false: only sideeffects/no export, array of strings: the exports with this names
-		};
-	}
+  getReference() {
+    if (!this.module)
+      return null;
 
-	// Returns the exported names
-	getExports() {
-		return null;
-	}
+    return {
+      module: this.module,
+      importedNames: true, // true: full object, false: only sideeffects/no export, array of strings: the exports with this names
+    };
+  }
 
-	getWarnings() {
-		return null;
-	}
+  // Returns the exported names
+  getExports() {
+    return null;
+  }
 
-	getErrors() {
-		return null;
-	}
+  getWarnings() {
+    return null;
+  }
 
-	updateHash(hash) {
-		hash.update((this.module && this.module.id) + "");
-	}
+  getErrors() {
+    return null;
+  }
 
-	disconnect() {
-		this.module = null;
-	}
+  updateHash(hash) {
+    hash.update((this.module && this.module.id) + "");
+  }
 
-	// TODO: remove in webpack 3
-	compare(a, b) {
-		return compareLocations(a.loc, b.loc);
-	}
+  disconnect() {
+    this.module = null;
+  }
+
+  // TODO: remove in webpack 3
+  compare(a, b) {
+    return compareLocations(a.loc, b.loc);
+  }
 }
 
 Dependency.compare = (a, b) => compareLocations(a.loc, b.loc);

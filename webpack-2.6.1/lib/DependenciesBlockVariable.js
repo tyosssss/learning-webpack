@@ -29,7 +29,7 @@ class DependenciesBlockVariable {
   /**
    * 
    * 
-   * @param {any} hash 
+   * @param {crypto.hash} hash 
    * @memberof DependenciesBlockVariable
    */
   updateHash(hash) {
@@ -42,17 +42,18 @@ class DependenciesBlockVariable {
   }
 
   /**
+   * 生成依赖块变量的最终代码
    * 
-   * 
-   * @param {any} dependencyTemplates 
-   * @param {any} outputOptions 
-   * @param {any} requestShortener 
-   * @returns 
+   * @param {DependencyTemplate[]} dependencyTemplates 依赖模板
+   * @param {Object} outputOptions 输出选项
+   * @param {RequestShortener} requestShortener 请求路径简写器
+   * @returns {ReplaceSource} 返回最终代码源
    * @memberof DependenciesBlockVariable
    */
   expressionSource(dependencyTemplates, outputOptions, requestShortener) {
     const source = new ReplaceSource(new RawSource(this.expression));
 
+    // render 变量的依赖
     this.dependencies.forEach(dep => {
       const template = dependencyTemplates.get(dep.constructor);
 

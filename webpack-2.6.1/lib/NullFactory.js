@@ -4,9 +4,21 @@
 */
 "use strict";
 
+/**
+ * 
+ * 
+ * @class NullFactory
+ */
 class NullFactory {
-	create(data, callback) {
-		return callback();
-	}
+  /**
+   * 创建模块实例
+   * 
+   * @param {ModuleInfo} data 模块信息
+   * @param {Function} callback 当创建完成时触发 (err,module:Module)=>void
+   */
+  create(data, callback) {
+    return callback();
+  }
 }
+
 module.exports = NullFactory;

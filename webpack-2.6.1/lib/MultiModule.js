@@ -16,14 +16,14 @@ class MultiModule extends Module {
    * @param {String} name 模块名称
    * @memberof MultiModule
    */
-	constructor(context, dependencies, name) {
-		super();
-		this.context = context;
-		this.dependencies = dependencies;
-		this.name = name;
-		this.built = false;
-		this.cacheable = true;
-	}
+  constructor(context, dependencies, name) {
+    super();
+    this.context = context;
+    this.dependencies = dependencies;
+    this.name = name;
+    this.built = false;
+    this.cacheable = true;
+  }
 
   /**
    * 
@@ -31,9 +31,9 @@ class MultiModule extends Module {
    * @returns 
    * @memberof MultiModule
    */
-	identifier() {
-		return `multi ${this.dependencies.map((d) => d.request).join(" ")}`;
-	}
+  identifier() {
+    return `multi ${this.dependencies.map((d) => d.request).join(" ")}`;
+  }
 
   /**
    * 
@@ -42,19 +42,19 @@ class MultiModule extends Module {
    * @returns 
    * @memberof MultiModule
    */
-	readableIdentifier(requestShortener) {
-		return `multi ${this.dependencies.map((d) => requestShortener.shorten(d.request)).join(" ")}`;
-	}
+  readableIdentifier(requestShortener) {
+    return `multi ${this.dependencies.map((d) => requestShortener.shorten(d.request)).join(" ")}`;
+  }
 
   /**
    * 
    * 
    * @memberof MultiModule
    */
-	disconnect() {
-		this.built = false;
-		super.disconnect();
-	}
+  disconnect() {
+    this.built = false;
+    super.disconnect();
+  }
 
   /**
    * 
@@ -67,10 +67,10 @@ class MultiModule extends Module {
    * @returns 
    * @memberof MultiModule
    */
-	build(options, compilation, resolver, fs, callback) {
-		this.built = true;
-		return callback();
-	}
+  build(options, compilation, resolver, fs, callback) {
+    this.built = true;
+    return callback();
+  }
 
   /**
    * 
@@ -78,9 +78,9 @@ class MultiModule extends Module {
    * @returns 
    * @memberof MultiModule
    */
-	needRebuild() {
-		return false;
-	}
+  needRebuild() {
+    return false;
+  }
 
   /**
    * 
@@ -88,9 +88,9 @@ class MultiModule extends Module {
    * @returns 
    * @memberof MultiModule
    */
-	size() {
-		return 16 + this.dependencies.length * 12;
-	}
+  size() {
+    return 16 + this.dependencies.length * 12;
+  }
 
   /**
    * 
@@ -98,11 +98,11 @@ class MultiModule extends Module {
    * @param {any} hash 
    * @memberof MultiModule
    */
-	updateHash(hash) {
-		hash.update("multi module");
-		hash.update(this.name || "");
-		super.updateHash(hash);
-	}
+  updateHash(hash) {
+    hash.update("multi module");
+    hash.update(this.name || "");
+    super.updateHash(hash);
+  }
 
   /**
    * 
@@ -112,26 +112,26 @@ class MultiModule extends Module {
    * @returns 
    * @memberof MultiModule
    */
-	source(dependencyTemplates, outputOptions) {
-		const str = [];
-		this.dependencies.forEach(function(dep, idx) {
-			if(dep.module) {
-				if(idx === this.dependencies.length - 1)
-					str.push("module.exports = ");
-				str.push("__webpack_require__(");
-				if(outputOptions.pathinfo)
-					str.push(`/*! ${dep.request} */`);
-				str.push(`${JSON.stringify(dep.module.id)}`);
-				str.push(")");
-			} else {
-				str.push("(function webpackMissingModule() { throw new Error(");
-				str.push(JSON.stringify(`Cannot find module "${dep.request}"`));
-				str.push("); }())");
-			}
-			str.push(";\n");
-		}, this);
-		return new RawSource(str.join(""));
-	}
+  source(dependencyTemplates, outputOptions) {
+    const str = [];
+    this.dependencies.forEach(function (dep, idx) {
+      if (dep.module) {
+        if (idx === this.dependencies.length - 1)
+          str.push("module.exports = ");
+        str.push("__webpack_require__(");
+        if (outputOptions.pathinfo)
+          str.push(`/*! ${dep.request} */`);
+        str.push(`${JSON.stringify(dep.module.id)}`);
+        str.push(")");
+      } else {
+        str.push("(function webpackMissingModule() { throw new Error(");
+        str.push(JSON.stringify(`Cannot find module "${dep.request}"`));
+        str.push("); }())");
+      }
+      str.push(";\n");
+    }, this);
+    return new RawSource(str.join(""));
+  }
 }
 
 module.exports = MultiModule;
