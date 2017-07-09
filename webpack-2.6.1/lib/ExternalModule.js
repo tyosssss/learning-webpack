@@ -40,7 +40,7 @@ class ExternalModule extends Module {
 	}
 
 	getSourceForGlobalVariableExternal(variableName, type) {
-		if(!Array.isArray(variableName)) {
+		if (!Array.isArray(variableName)) {
 			// make it an array as the look up works the same basically
 			variableName = [variableName];
 		}
@@ -51,7 +51,7 @@ class ExternalModule extends Module {
 	}
 
 	getSourceForCommonJsExternal(moduleAndSpecifiers) {
-		if(!Array.isArray(moduleAndSpecifiers)) {
+		if (!Array.isArray(moduleAndSpecifiers)) {
 			return `module.exports = require(${JSON.stringify(moduleAndSpecifiers)});`;
 		}
 
@@ -77,7 +77,7 @@ class ExternalModule extends Module {
 
 	getSourceString() {
 		const request = typeof this.request === "object" ? this.request[this.type] : this.request;
-		switch(this.type) {
+		switch (this.type) {
 			case "this":
 			case "window":
 			case "global":
@@ -95,7 +95,7 @@ class ExternalModule extends Module {
 	}
 
 	getSource(sourceString) {
-		if(this.useSourceMap) {
+		if (this.useSourceMap) {
 			return new OriginalSource(sourceString, this.identifier());
 		}
 

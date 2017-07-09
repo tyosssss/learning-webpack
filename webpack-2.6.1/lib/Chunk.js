@@ -22,9 +22,9 @@ class Chunk {
 
   /**
    * Creates an instance of Chunk.
-   * @param {any} name 
-   * @param {any} module 
-   * @param {any} loc 
+   * @param {String} name 块名
+   * @param {Module} module 模块实例
+   * @param {SourceLocation} loc 模块的引用语句的位置
    * @memberof Chunk
    */
   constructor(name, module, loc) {
@@ -40,6 +40,7 @@ class Chunk {
     this.origins = [];
     this.files = [];
     this.rendered = false;
+
     if (module) {
       this.origins.push({
         module,
@@ -66,7 +67,7 @@ class Chunk {
   }
 
   /**
-   * 
+   * 块中是否应该包含运行时
    * 
    * @returns {Boolean}
    * @memberof Chunk
@@ -100,11 +101,11 @@ class Chunk {
   }
 
   /**
+   * 向集合添加项 , 确保项不会重复
    * 
-   * 
-   * @param {any} collection 
-   * @param {any} item 
-   * @returns 
+   * @param {Any} collection 
+   * @param {Any} item 
+   * @returns {Boolean} true , 成功; false , 失败
    * @memberof Chunk
    */
   addToCollection(collection, item) {
@@ -143,14 +144,45 @@ class Chunk {
   }
 
   /**
+   * 添加属于该块的模块
+   * 
+   * @param {Module} module 属于该块的模块
+   * @returns  {Boolean}
+   * @memberof Chunk
+   */
+  addModule(module) {
+    return this.addToCollection(this.modules, module);
+  }
+
+  /**
+   * 将模块module移动到指定的块chunk
+   * @param {Module} module 待移动的模块
+   * @param {Chunk} otherChunk 目标模块
+   */
+  moveModule(module, otherChunk) {
+    module.removeChunk(this);
+    module.addChunk(otherChunk);
+    otherChunk.addModule(module);
+    module.rewriteChunkInReasons(this, [otherChunk]);
+  }
+
+  /**
    * 
    * 
    * @param {any} module 
    * @returns 
    * @memberof Chunk
    */
-  addModule(module) {
-    return this.addToCollection(this.modules, module);
+  removeModule(module) {
+    const idx = this.modules.indexOf(module);
+
+    if (idx >= 0) {
+      this.modules.splice(idx, 1);
+      module.removeChunk(this);
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -164,22 +196,7 @@ class Chunk {
     return this.addToCollection(this.blocks, block);
   }
 
-  /**
-   * 
-   * 
-   * @param {any} module 
-   * @returns 
-   * @memberof Chunk
-   */
-  removeModule(module) {
-    const idx = this.modules.indexOf(module);
-    if (idx >= 0) {
-      this.modules.splice(idx, 1);
-      module.removeChunk(this);
-      return true;
-    }
-    return false;
-  }
+
 
   removeChunk(chunk) {
     const idx = this.chunks.indexOf(chunk);
@@ -201,6 +218,11 @@ class Chunk {
     return false;
   }
 
+  /**
+   * 
+   * @param {Module} module 
+   * @param {SourceLocation} loc 
+   */
   addOrigin(module, loc) {
     this.origins.push({
       module,
@@ -263,12 +285,7 @@ class Chunk {
     });
   }
 
-  moveModule(module, otherChunk) {
-    module.removeChunk(this);
-    module.addChunk(otherChunk);
-    otherChunk.addModule(module);
-    module.rewriteChunkInReasons(this, [otherChunk]);
-  }
+
 
   replaceChunk(oldChunk, newChunk) {
     const idx = this.chunks.indexOf(oldChunk);
@@ -420,7 +437,7 @@ class Chunk {
     const chunksProcessed = []; // 存储 正在处理的Chunk , 避免重复处理
     const chunkHashMap = {};
     const chunkNameMap = {};
-    
+
     (function addChunk(chunk) {
       if (chunksProcessed.indexOf(chunk) >= 0) return;
       chunksProcessed.push(chunk);
@@ -428,17 +445,17 @@ class Chunk {
       // !chunk.hasRuntime() -- 不包含初始块
       // includeEntries     --- 是否包含入口块
       if (!chunk.hasRuntime() || includeEntries) {
-        chunkHashMap[chunk.id] = realHash 
-          ? chunk.hash 
+        chunkHashMap[chunk.id] = realHash
+          ? chunk.hash
           : chunk.renderedHash;
-        
+
         if (chunk.name)
           chunkNameMap[chunk.id] = chunk.name;
       }
-      
+
       chunk.chunks.forEach(addChunk);
     }(this));
-    
+
     return {
       hash: chunkHashMap,
       name: chunkNameMap

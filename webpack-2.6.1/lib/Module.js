@@ -58,11 +58,12 @@ class Module extends DependenciesBlock {
   /**
    * 
    * 
-   * @param {any} chunk 
+   * @param {Chunk} chunk 块实例
    * @memberof Module
    */
   addChunk(chunk) {
     let idx = this.chunks.indexOf(chunk);
+
     if (idx < 0)
       this.chunks.push(chunk);
   }
@@ -84,11 +85,13 @@ class Module extends DependenciesBlock {
     return false;
   }
 
+
+
   /**
+   * 添加模块引入原因
    * 
-   * 
-   * @param {any} module 
-   * @param {any} dependency 
+   * @param {Module} module 
+   * @param {Dependency} dependency 
    * @memberof Module
    */
   addReason(module, dependency) {
@@ -98,8 +101,8 @@ class Module extends DependenciesBlock {
   /**
    * 
    * 
-   * @param {any} module 
-   * @param {any} dependency 
+   * @param {Module} module 
+   * @param {Dependency} dependency  
    * @returns 
    * @memberof Module
    */
@@ -135,8 +138,8 @@ class Module extends DependenciesBlock {
   /**
    * 
    * 
-   * @param {any} oldChunk 
-   * @param {any} newChunks 
+   * @param {Chunk} oldChunk 
+   * @param {Chunk} newChunks 
    * @memberof Module
    */
   rewriteChunkInReasons(oldChunk, newChunks) {
@@ -152,6 +155,8 @@ class Module extends DependenciesBlock {
       }, []);
     });
   }
+
+
 
   /**
    * 
@@ -256,7 +261,7 @@ class Module extends DependenciesBlock {
     this.usedExports = null;
     this.providedExports = null;
     this.chunks.length = 0;
-    
+
     super.disconnect();
   }
 }

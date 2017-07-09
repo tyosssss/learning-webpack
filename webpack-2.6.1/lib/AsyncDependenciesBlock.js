@@ -10,7 +10,7 @@ module.exports = class AsyncDependenciesBlock extends DependenciesBlock {
    * Creates an instance of AsyncDependenciesBlock.
    * @param {String} name 块名
    * @param {Module} module 模块
-   * @param {SourceLocation} loc 代码位置
+   * @param {SourceLocation} loc 模块的引用语句的位置
    */
   constructor(name, module, loc) {
     super();

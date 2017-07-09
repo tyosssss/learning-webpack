@@ -220,9 +220,9 @@ class Compilation extends Tapable {
 	 * @param {String} context 上下文路径 ( config.output )
 	 * @param {ModuleDependency} entry 入口模块依赖
 	 * @param {String} name 入口块的名称 ( ChunkName )
-	 * @param {Function} callback 回调函数
+	 * @param {Function} onMaked 当make完成时触发
 	 */
-  addEntry(context, entry, name, callback) {
+  addEntry(context, entry, name, onMaked) {
     const slot = {
       name: name,
       module: null
@@ -243,7 +243,7 @@ class Compilation extends Tapable {
       },
       (err, module) => {
         if (err) {
-          return callback(err);
+          return onMaked(err);
         }
 
         if (module) {
@@ -254,7 +254,7 @@ class Compilation extends Tapable {
           this.preparedChunks.splice(idx, 1);
         }
 
-        return callback(null, module);
+        return onMaked(null, module);
       });
   }
 
@@ -478,6 +478,10 @@ class Compilation extends Tapable {
 
   /**
 	 * 处理模块的依赖
+   * 
+   * 1. 收集模块的所有依赖块
+   * 2. 并发构建依赖块中的模块依赖
+   * 
 	 * @param {Module} module 模块实例
 	 * @param {Function} callback 
 	 */
@@ -535,12 +539,14 @@ class Compilation extends Tapable {
   }
 
 	/**
-	 * 
+	 * 添加模块依赖
+   * 1. 构建模块module中发现的模块依赖
+   * 2. 并发递归的处理模块依赖的依赖
 	 * @param {Module} module 模块实例
 	 * @param {Dependency[]} dependencies 模块中出现的所有依赖实例
 	 * @param {Boolean} bail 是否中断
 	 * @param {String} cacheGroup 缓存组名
-	 * @param {Boolean} recursive 是否递归
+	 * @param {Boolean} recursive 是否递归处理依赖模块的依赖
 	 * @param {Function} callback 回调函数
 	 */
   addModuleDependencies(module, dependencies, bail, cacheGroup, recursive, callback) {
@@ -619,10 +625,14 @@ class Compilation extends Tapable {
               }
             }
 
-            // 
+            /**
+             * 
+             * @param {Dependency[]} depend 
+             */
             function iterationDependencies(depend) {
               for (let index = 0; index < depend.length; index++) {
                 const dep = depend[index];
+
                 dep.module = dependentModule;
                 dependentModule.addReason(module, dep);
               }
@@ -632,7 +642,7 @@ class Compilation extends Tapable {
             if (err) {
               return errorOrWarningAndCallback(new ModuleNotFoundError(module, err, dependencies));
             }
-            
+
             // 模块被忽略或非模块依赖 , 直接跳过后续处理
             if (!dependentModule) {
               return process.nextTick(callback);
@@ -655,7 +665,7 @@ class Compilation extends Tapable {
 
             // newModule = false 
             // 模块实例来自 , 模块已构建 , 无需构建
-            if (!newModule) { 
+            if (!newModule) {
               // 从缓存中获得实例
               dependentModule = _this.getModule(dependentModule);
 
@@ -663,8 +673,10 @@ class Compilation extends Tapable {
                 dependentModule.optional = isOptional();
               }
 
+              // 建立 deps --> module 的关联
               iterationDependencies(dependencies);
 
+              // 记录性能
               if (_this.profile) {
                 if (!module.profile) {
                   module.profile = {};
@@ -675,14 +687,17 @@ class Compilation extends Tapable {
                 }
               }
 
+              // 继续生成下一个依赖
               return process.nextTick(callback);
             }
 
+            // 缓存中的模块 && 无需重新构建
             if (newModule instanceof Module) {
               if (_this.profile) {
                 newModule.profile = dependentModule.profile;
               }
 
+              // 修正数据
               newModule.optional = isOptional();
               newModule.issuer = dependentModule.issuer;
               dependentModule = newModule;
@@ -694,6 +709,7 @@ class Compilation extends Tapable {
                 module.profile.building = afterBuilding - afterFactory;
               }
 
+              // 是否继续递归处理 依赖模块的依赖
               if (recursive) {
                 return process.nextTick(_this.processModuleDependencies.bind(_this, dependentModule, callback));
               } else {
@@ -702,9 +718,9 @@ class Compilation extends Tapable {
             }
 
             dependentModule.optional = isOptional();
-
             iterationDependencies(dependencies);
 
+            // 构建模块
             _this.buildModule(dependentModule, isOptional(), module, dependencies, err => {
               if (err) {
                 return errorOrWarningAndCallback(err);
@@ -715,16 +731,21 @@ class Compilation extends Tapable {
                 dependentModule.profile.building = afterBuilding - afterFactory;
               }
 
+              // 是否继续递归处理 依赖模块的依赖
               if (recursive) {
                 _this.processModuleDependencies(dependentModule, callback);
               } else {
                 return callback();
               }
             });
-
           });
       },
       function finalCallbackAddModuleDependencies(err) {
+        /**
+         * 在V8中，Error对象保留对堆栈上的函数的引用。 
+         * 这些警告和错误是在保留对编译的引用的闭包内创建的，
+         * 因此错误泄漏了编译对象。 将_this设置为null解决V8中的以下问题。
+         */
         // In V8, the Error objects keep a reference to the functions on the stack. These warnings &
         // errors are created inside closures that keep a reference to the Compilation, so errors are
         // leaking the Compilation object. Setting _this to null workarounds the following issue in V8.
@@ -740,55 +761,13 @@ class Compilation extends Tapable {
     );
   }
 
-  /**
-   * 
-   * 
-   * @param {any} module 
-   * @param {any} thisCallback 
-   * @returns 
-   * @memberof Compilation
-   */
-  rebuildModule(module, thisCallback) {
-    if (module.variables.length || module.blocks.length)
-      throw new Error("Cannot rebuild a complex module with variables or blocks");
-    if (module.rebuilding) {
-      return module.rebuilding.push(thisCallback);
-    }
-    const rebuilding = module.rebuilding = [thisCallback];
-
-    function callback(err) {
-      module.rebuilding = undefined;
-      rebuilding.forEach(cb => cb(err));
-    }
-    const deps = module.dependencies.slice();
-    this.buildModule(module, false, module, null, (err) => {
-      if (err) return callback(err);
-
-      this.processModuleDependencies(module, (err) => {
-        if (err) return callback(err);
-        deps.forEach(d => {
-          if (d.module && d.module.removeReason(module, d)) {
-            module.chunks.forEach(chunk => {
-              if (!d.module.hasReasonForChunk(chunk)) {
-                if (d.module.removeChunk(chunk)) {
-                  this.removeChunkFromDependencies(d.module, chunk);
-                }
-              }
-            });
-          }
-        });
-        callback();
-      });
-
-    });
-  }
-
 	/**
 	 * 将module添加到编译实例的模块列表中
    * 
    * 返回值
-   * true  -- 
-   * false -- 模块已构建 , 无需构建
+   * 1. 构建完毕 , 返回false ( 通过getModule获得实例 )
+   * 2. 存在缓存 , 无需重新构建直接 , 返回模块实例
+   * 3. 存在缓存需要重新构建 或 新创建的模块 , 返回true ( 表示需要进行构建 )
    * 
 	 * @param {Module} module 模块实例
 	 * @param {String} cacheGroup 缓存组名
@@ -823,12 +802,14 @@ class Compilation extends Tapable {
         );
       }
 
+      // 不需要重新构建
       if (!rebuild) {
         cacheModule.disconnect();
 
         this._modules[identifier] = cacheModule;
         this.modules.push(cacheModule);
 
+        // 保存错误和警告
         cacheModule.errors.forEach(err => this.errors.push(err), this);
         cacheModule.warnings.forEach(err => this.warnings.push(err), this);
 
@@ -877,8 +858,13 @@ class Compilation extends Tapable {
     return this._modules[identifier];
   }
 
+
+
+  // ----------------------------------------------------------------
+  // ************************  make 阶段完成  ************************
+  // ----------------------------------------------------------------
   /**
-   * 编译完成 -- 发出事件 , 记录错误和警告信息
+   * make完成 -- 发出事件 , 记录错误和警告信息
    * 
    * @memberof Compilation
    */
@@ -889,6 +875,8 @@ class Compilation extends Tapable {
 
     for (let index = 0; index < modules.length; index++) {
       const module = modules[index];
+      
+      // 记录警告和错误
       this.reportDependencyErrorsAndWarnings(module, [module]);
     }
   }
@@ -897,6 +885,7 @@ class Compilation extends Tapable {
 
   /**
    * 打包
+   * 1. 从入口块开始 
    * 
    * @param {Function} callback 打包完成之后调用的回调函数
    * 
@@ -911,21 +900,21 @@ class Compilation extends Tapable {
     self.nextFreeModuleIndex = 0;
     self.nextFreeModuleIndex2 = 0;
 
-    //
-    // 处理已就绪的块
-    //
+    // 处理入口块
     self.preparedChunks.forEach(preparedChunk => {
+      // 获得模块实例
       const module = preparedChunk.module;
 
       // 存储块
       const chunk = self.addChunk(preparedChunk.name, module);
 
-      // 创建入口点
+      // 创建入口点 , 将chunk作为入口点的初始块
       const entrypoint = self.entrypoints[chunk.name] = new Entrypoint(chunk.name);
       entrypoint.unshiftChunk(chunk);
 
-      // 块与模块建立关系
+      // 向块添加模块
       chunk.addModule(module);
+      
       module.addChunk(chunk);
 
       chunk.entryModule = module;
@@ -1044,6 +1033,39 @@ class Compilation extends Tapable {
   }
 
   /**
+   * 向块列表添加一个指定起源模块的块. 
+   * 若块存在,只需使用将模块module添加到块的起源模块列表即可
+   * 
+   * @param {String} name 块名
+   * @param {Module} module 模块实例
+   * @param {SourceLocation} [loc] 
+   * @returns {Chunk} 返回块的实例
+   * 
+   * @memberof Compilation
+   */
+  addChunk(name, module, loc) {
+    // 如果命名块已经存在 , 那么将模块添加到块中即可
+    if (name) {
+      if (Object.prototype.hasOwnProperty.call(this.namedChunks, name)) {
+        const chunk = this.namedChunks[name];
+        if (module) {
+          chunk.addOrigin(module, loc);
+        }
+
+        return chunk;
+      }
+    }
+
+    const chunk = new Chunk(name, module, loc);
+    this.chunks.push(chunk);
+    if (name) {
+      this.namedChunks[name] = chunk;
+    }
+
+    return chunk;
+  }
+
+  /**
    * 模块排序 -- 根据index
    * 
    * @param {Module[]} modules 
@@ -1058,73 +1080,7 @@ class Compilation extends Tapable {
     });
   }
 
-  /**
-   * 报告依赖错误或警告
-   * 
-   * @param {any} module 
-   * @param {any} blocks 
-   * 
-   * @memberof Compilation
-   */
-  reportDependencyErrorsAndWarnings(module, blocks) {
-    for (let indexBlock = 0; indexBlock < blocks.length; indexBlock++) {
-      const block = blocks[indexBlock];
-      const dependencies = block.dependencies;
-
-      for (let indexDep = 0; indexDep < dependencies.length; indexDep++) {
-        const d = dependencies[indexDep];
-
-        const warnings = d.getWarnings();
-        if (warnings) {
-          for (let indexWar = 0; indexWar < warnings.length; indexWar++) {
-            const w = warnings[indexWar];
-
-            const warning = new ModuleDependencyWarning(module, w, d.loc);
-            this.warnings.push(warning);
-          }
-        }
-        const errors = d.getErrors();
-        if (errors) {
-          for (let indexErr = 0; indexErr < errors.length; indexErr++) {
-            const e = errors[indexErr];
-
-            const error = new ModuleDependencyError(module, e, d.loc);
-            this.errors.push(error);
-          }
-        }
-      }
-
-      this.reportDependencyErrorsAndWarnings(module, block.blocks);
-    }
-  }
-
-  /**
-   * 向块列表添加一个指定起源模块的块. 若块存在,只需使用将模块module添加到块的起源模块列表即可
-   * 
-   * @param {String} name 块名
-   * @param {Module} module 模块
-   * @param {Object} loc 模块位置
-   * @returns {Chunk} 返回块
-   * 
-   * @memberof Compilation
-   */
-  addChunk(name, module, loc) {
-    if (name) {
-      if (Object.prototype.hasOwnProperty.call(this.namedChunks, name)) {
-        const chunk = this.namedChunks[name];
-        if (module) {
-          chunk.addOrigin(module, loc);
-        }
-        return chunk;
-      }
-    }
-    const chunk = new Chunk(name, module, loc);
-    this.chunks.push(chunk);
-    if (name) {
-      this.namedChunks[name] = chunk;
-    }
-    return chunk;
-  }
+  
 
   /**
    * 
@@ -1892,6 +1848,91 @@ class Compilation extends Tapable {
   templatesPlugin(name, fn) {
     this.mainTemplate.plugin(name, fn);
     this.chunkTemplate.plugin(name, fn);
+  }
+
+
+
+  /**
+   * 记录构建依赖过程中发现的所有警告和异常
+   * 
+   * @param {Module} module 
+   * @param {DependenciesBlock} blocks 
+   * 
+   * @memberof Compilation
+   */
+  reportDependencyErrorsAndWarnings(module, blocks) {
+    for (let indexBlock = 0; indexBlock < blocks.length; indexBlock++) {
+      const block = blocks[indexBlock];
+      const dependencies = block.dependencies;
+
+      for (let indexDep = 0; indexDep < dependencies.length; indexDep++) {
+        const d = dependencies[indexDep];
+
+        const warnings = d.getWarnings();
+        if (warnings) {
+          for (let indexWar = 0; indexWar < warnings.length; indexWar++) {
+            const w = warnings[indexWar];
+
+            const warning = new ModuleDependencyWarning(module, w, d.loc);
+            this.warnings.push(warning);
+          }
+        }
+        const errors = d.getErrors();
+        if (errors) {
+          for (let indexErr = 0; indexErr < errors.length; indexErr++) {
+            const e = errors[indexErr];
+
+            const error = new ModuleDependencyError(module, e, d.loc);
+            this.errors.push(error);
+          }
+        }
+      }
+
+      this.reportDependencyErrorsAndWarnings(module, block.blocks);
+    }
+  }
+
+  /**
+   * 
+   * 
+   * @param {any} module 
+   * @param {any} thisCallback 
+   * @returns 
+   * @memberof Compilation
+   */
+  rebuildModule(module, thisCallback) {
+    if (module.variables.length || module.blocks.length)
+      throw new Error("Cannot rebuild a complex module with variables or blocks");
+    if (module.rebuilding) {
+      return module.rebuilding.push(thisCallback);
+    }
+    const rebuilding = module.rebuilding = [thisCallback];
+
+    function callback(err) {
+      module.rebuilding = undefined;
+      rebuilding.forEach(cb => cb(err));
+    }
+    const deps = module.dependencies.slice();
+    this.buildModule(module, false, module, null, (err) => {
+      if (err) return callback(err);
+
+      this.processModuleDependencies(module, (err) => {
+        if (err) return callback(err);
+        deps.forEach(d => {
+          if (d.module && d.module.removeReason(module, d)) {
+            module.chunks.forEach(chunk => {
+              if (!d.module.hasReasonForChunk(chunk)) {
+                if (d.module.removeChunk(chunk)) {
+                  this.removeChunkFromDependencies(d.module, chunk);
+                }
+              }
+            });
+          }
+        });
+        callback();
+      });
+
+    });
   }
 }
 

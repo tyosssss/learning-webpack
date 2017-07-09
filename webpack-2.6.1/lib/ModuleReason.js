@@ -4,6 +4,9 @@
 */
 "use strict";
 
+/**
+ * 
+ */
 module.exports = class ModuleReason {
 	constructor(module, dependency) {
 		this.module = module;

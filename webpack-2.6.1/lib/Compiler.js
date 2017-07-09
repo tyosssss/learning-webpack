@@ -296,7 +296,7 @@ Compiler.prototype.run = function (callback) {
               stats.startTime = startTime;
               stats.endTime = Date.now();
               self.applyPlugins("done", stats);
-              
+
               return callback(null, stats);
             });
           });
@@ -326,13 +326,13 @@ Compiler.prototype.compile = function (callback) {
     var compilation = self.newCompilation(params);
 
     // pub "make"
-    self.applyPluginsParallel("make", compilation, function (err) {
+    self.applyPluginsParallel("make", compilation, function onMaked(err) {
       if (err) return callback(err);
 
       // 编译完成
       compilation.finish();
 
-      // 
+      // 打包
       compilation.seal(function (err) {
         if (err) return callback(err);
 
@@ -443,7 +443,7 @@ Compiler.prototype.emitAssets = function (compilation, callback) {
 
         if (targetFile.match(/\/|\\/)) {
           var dir = path.dirname(targetFile);
-          
+
           // join(outputPath , fileDirPath)
           this.outputFileSystem.mkdirp(
             this.outputFileSystem.join(outputPath, dir),
@@ -455,10 +455,10 @@ Compiler.prototype.emitAssets = function (compilation, callback) {
 
         function writeOut(err) {
           if (err) return callback(err);
-          
+
           var targetPath = this.outputFileSystem.join(outputPath, targetFile);
           var source = compilation.assets[file];
-          
+
           if (source.existsAt === targetPath) {
             source.emitted = false;
             return callback();
