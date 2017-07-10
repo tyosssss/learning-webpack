@@ -101,27 +101,6 @@ class Chunk {
   }
 
   /**
-   * 向集合添加项 , 确保项不会重复
-   * 
-   * @param {Any} collection 
-   * @param {Any} item 
-   * @returns {Boolean} true , 成功; false , 失败
-   * @memberof Chunk
-   */
-  addToCollection(collection, item) {
-    if (item === this) {
-      return false;
-    }
-
-    if (collection.indexOf(item) > -1) {
-      return false;
-    }
-
-    collection.push(item);
-    return true;
-  }
-
-  /**
    * 
    * 
    * @param {any} chunk 
@@ -132,11 +111,21 @@ class Chunk {
     return this.addToCollection(this.chunks, chunk);
   }
 
+  removeChunk(chunk) {
+    const idx = this.chunks.indexOf(chunk);
+    if (idx >= 0) {
+      this.chunks.splice(idx, 1);
+      chunk.removeParent(this);
+      return true;
+    }
+    return false;
+  }
+
   /**
+   * 添加父亲块
    * 
-   * 
-   * @param {any} parentChunk 
-   * @returns 
+   * @param {Chunk} parentChunk 
+   * @returns {Boolean}
    * @memberof Chunk
    */
   addParent(parentChunk) {
@@ -198,15 +187,7 @@ class Chunk {
 
 
 
-  removeChunk(chunk) {
-    const idx = this.chunks.indexOf(chunk);
-    if (idx >= 0) {
-      this.chunks.splice(idx, 1);
-      chunk.removeParent(this);
-      return true;
-    }
-    return false;
-  }
+
 
   removeParent(chunk) {
     const idx = this.parents.indexOf(chunk);
@@ -372,10 +353,17 @@ class Chunk {
     return this.modules.length === 0;
   }
 
+  /**
+   * 
+   * 
+   * @param {any} hash 
+   * @memberof Chunk
+   */
   updateHash(hash) {
     hash.update(`${this.id} `);
     hash.update(this.ids ? this.ids.join(",") : "");
     hash.update(`${this.name || ""} `);
+    
     this.modules.forEach(m => m.updateHash(hash));
   }
 
@@ -464,6 +452,7 @@ class Chunk {
 
   sortItems() {
     this.modules.sort(byId);
+
     this.origins.sort((a, b) => {
       const aIdent = a.module.identifier();
       const bIdent = b.module.identifier();
@@ -471,11 +460,14 @@ class Chunk {
       if (aIdent > bIdent) return 1;
       return compareLocations(a.loc, b.loc);
     });
+
     this.origins.forEach(origin => {
       if (origin.reasons)
         origin.reasons.sort();
     });
+
     this.parents.sort(byId);
+
     this.chunks.sort(byId);
   }
 
@@ -497,6 +489,29 @@ class Chunk {
       if (parentChunk.chunks.indexOf(chunk) < 0)
         throw new Error(`checkConstraints: parent missing child ${parentChunk.debugId} <- ${chunk.debugId}`);
     });
+  }
+
+
+
+  /**
+   * 向集合添加项 , 确保项不会重复
+   * 
+   * @param {Any} collection 
+   * @param {Any} item 
+   * @returns {Boolean} true , 成功; false , 失败
+   * @memberof Chunk
+   */
+  addToCollection(collection, item) {
+    if (item === this) {
+      return false;
+    }
+
+    if (collection.indexOf(item) > -1) {
+      return false;
+    }
+
+    collection.push(item);
+    return true;
   }
 }
 

@@ -69,19 +69,21 @@ class Module extends DependenciesBlock {
   }
 
   /**
+   * 从指定块中移除该模块
    * 
-   * 
-   * @param {any} chunk 
-   * @returns 
+   * @param {Chunk} chunk 
+   * @returns {Boolean} true=移除成功,false=移除失败
    * @memberof Module
    */
   removeChunk(chunk) {
     let idx = this.chunks.indexOf(chunk);
+    
     if (idx >= 0) {
       this.chunks.splice(idx, 1);
       chunk.removeModule(this);
       return true;
     }
+
     return false;
   }
 
@@ -214,14 +216,14 @@ class Module extends DependenciesBlock {
   }
 
   /**
+   * 更新生成内容摘要的原始值
    * 
-   * 
-   * @param {any} hash 
-   * @memberof Module
+   * @param {crypto.hash} hash hash实例
    */
   updateHash(hash) {
     hash.update(this.id + "" + this.used);
     hash.update(JSON.stringify(this.usedExports));
+
     super.updateHash(hash);
   }
 
@@ -232,6 +234,7 @@ class Module extends DependenciesBlock {
    */
   sortItems() {
     super.sortItems();
+
     this.chunks.sort(byId);
     this.reasons.sort((a, b) => byId(a.module, b.module));
   }

@@ -41,8 +41,8 @@ function byId(a, b) {
 }
 
 /**
- * 
- * @param {DependenciesBlockVariable[]} variables 
+ * 遍历注入变量依赖列表中的依赖列表 , 将依赖作为参数值 , 调用指定函数fn
+ * @param {DependenciesBlockVariable[]} variables 注入变量依赖
  * @param {Function} fn 
  */
 function iterationBlockVariable(variables, fn) {
@@ -875,7 +875,7 @@ class Compilation extends Tapable {
 
     for (let index = 0; index < modules.length; index++) {
       const module = modules[index];
-      
+
       // 记录警告和错误
       this.reportDependencyErrorsAndWarnings(module, [module]);
     }
@@ -883,6 +883,10 @@ class Compilation extends Tapable {
 
 
 
+
+  // ----------------------------------------------------------------
+  // ************************  seal 打包阶段  ************************
+  // ----------------------------------------------------------------
   /**
    * 打包
    * 1. 从入口块开始 
@@ -900,7 +904,10 @@ class Compilation extends Tapable {
     self.nextFreeModuleIndex = 0;
     self.nextFreeModuleIndex2 = 0;
 
-    // 处理入口块
+    /**
+     * 所有入口块
+     * 将依赖块都添加到相应的块中 , 为打包代码做准备
+     */
     self.preparedChunks.forEach(preparedChunk => {
       // 获得模块实例
       const module = preparedChunk.module;
@@ -912,37 +919,49 @@ class Compilation extends Tapable {
       const entrypoint = self.entrypoints[chunk.name] = new Entrypoint(chunk.name);
       entrypoint.unshiftChunk(chunk);
 
-      // 向块添加模块
+
+      /**
+       * 建立Chunk与Module的关联关系
+       * Chunk与Module , m : n
+       */
       chunk.addModule(module);
-      
       module.addChunk(chunk);
 
+      // 保存入口模块
       chunk.entryModule = module;
 
       // 为模块分配index
       self.assignIndex(module);
 
-      // 为模块分配depth
+      // 为以入口块为根节点的模块依赖树中的节点分配各自的深度值
       self.assignDepth(module);
 
-      // 处理入口块chunk与入口模块的依赖模块
+      // 将依赖树中的依赖块添加到相应的块中
       self.processDependenciesBlockForChunk(module, chunk);
     });
 
-    // 根据module.index , 对模块列表进行排序
+    // 按线索树索引,排序模块列表
     self.sortModules(self.modules);
 
     self.applyPlugins0("optimize");
 
+    //
+    // 优化 modules 
+    //
     while (self.applyPluginsBailResult1("optimize-modules-basic", self.modules) ||
       self.applyPluginsBailResult1("optimize-modules", self.modules) ||
       self.applyPluginsBailResult1("optimize-modules-advanced", self.modules)); // eslint-disable-line no-extra-semi
+
     self.applyPlugins1("after-optimize-modules", self.modules);
 
+    //
+    // 优化chunks
+    // 
     while (self.applyPluginsBailResult1("optimize-chunks-basic", self.chunks) ||
       self.applyPluginsBailResult1("optimize-chunks", self.chunks) ||
       self.applyPluginsBailResult1("optimize-chunks-advanced", self.chunks)); // eslint-disable-line no-extra-semi
     self.applyPlugins1("after-optimize-chunks", self.chunks);
+
 
     self.applyPluginsAsyncSeries("optimize-tree", self.chunks, self.modules, function sealPart2(err) {
       if (err) {
@@ -953,18 +972,24 @@ class Compilation extends Tapable {
 
       const shouldRecord = self.applyPluginsBailResult("should-record") !== false;
 
+      //
+      // 处理模块的顺序 , ids
+      // 
       self.applyPlugins2("revive-modules", self.modules, self.records);
       self.applyPlugins1("optimize-module-order", self.modules);
       self.applyPlugins1("advanced-optimize-module-order", self.modules);
       self.applyPlugins1("before-module-ids", self.modules);
       self.applyPlugins1("module-ids", self.modules);
-      self.applyModuleIds();
+      self.applyModuleIds();  // 为模块列表中的模块分配ID
       self.applyPlugins1("optimize-module-ids", self.modules);
       self.applyPlugins1("after-optimize-module-ids", self.modules);
 
       // 根据模块ID , 重新排序模块列表
       self.sortItemsWithModuleIds();
 
+      //
+      // 处理块的顺序 , ids
+      //
       self.applyPlugins2("revive-chunks", self.chunks, self.records);
       self.applyPlugins1("optimize-chunk-order", self.chunks);
       self.applyPlugins1("before-chunk-ids", self.chunks);
@@ -982,7 +1007,7 @@ class Compilation extends Tapable {
         self.applyPlugins2("record-chunks", self.chunks, self.records);
 
       //
-      // 生成Hash
+      // 生成编译内容的信息摘要
       //
       self.applyPlugins0("before-hash");
       self.createHash();
@@ -990,20 +1015,25 @@ class Compilation extends Tapable {
       if (shouldRecord) self.applyPlugins1("record-hash", self.records);
 
       //
-      // 
+      // 创建模块中包含的资源
       //
       self.applyPlugins0("before-module-assets");
       self.createModuleAssets();
 
       //
-      //
+      //创建块中包含的资源
       //
       if (self.applyPluginsBailResult("should-generate-chunk-assets") !== false) {
         self.applyPlugins0("before-chunk-assets");
         self.createChunkAssets();
       }
+
       self.applyPlugins1("additional-chunk-assets", self.chunks);
+
+
+      // 汇总编译时出现的依赖
       self.summarizeDependencies();
+
       if (shouldRecord)
         self.applyPlugins2("record", self, self.records);
 
@@ -1011,11 +1041,14 @@ class Compilation extends Tapable {
         if (err) {
           return callback(err);
         }
+
         self.applyPluginsAsync("optimize-chunk-assets", self.chunks, err => {
           if (err) {
             return callback(err);
           }
+
           self.applyPlugins1("after-optimize-chunk-assets", self.chunks);
+
           self.applyPluginsAsync("optimize-assets", self.assets, err => {
             if (err) {
               return callback(err);
@@ -1023,6 +1056,7 @@ class Compilation extends Tapable {
             self.applyPlugins1("after-optimize-assets", self.assets);
             if (self.applyPluginsBailResult("need-additional-seal")) {
               self.unseal();
+              
               return self.seal(callback);
             }
             return self.applyPluginsAsync("after-seal", callback);
@@ -1066,56 +1100,37 @@ class Compilation extends Tapable {
   }
 
   /**
-   * 模块排序 -- 根据index
+   * 建立模块依赖树的线索
    * 
-   * @param {Module[]} modules 
+   * 1. 
    * 
-   * @memberof Compilation
-   */
-  sortModules(modules) {
-    modules.sort((a, b) => {
-      if (a.index < b.index) return -1;
-      if (a.index > b.index) return 1;
-      return 0;
-    });
-  }
-
-  
-
-  /**
-   * 
-   * 
-   * @param {Module} module 
+   * @param {Module} module 根模块节点 ( 入口节点 )
    * 
    * @memberof Compilation
    */
   assignIndex(module) {
     const _this = this;
 
-    const queue = [() => {
-      assignIndexToModule(module);
-    }];
-
-    const iteratorAllDependencies = d => {
-      queue.push(() => assignIndexToDependency(d));
-    };
+    /**
+     * 队列
+     * 
+     */
+    const queue = [
+      () => {
+        assignIndexToModule(module);
+      }
+    ];
 
     function assignIndexToModule(module) {
       // enter module
       if (typeof module.index !== "number") {
-        module.index = _this.nextFreeModuleIndex++;
+        module.ndex = _this.nextFreeModuleIndex++;
 
         // leave module
         queue.push(() => module.index2 = _this.nextFreeModuleIndex2++);
 
         // enter it as block
         assignIndexToDependencyBlock(module);
-      }
-    }
-
-    function assignIndexToDependency(dependency) {
-      if (dependency.module) {
-        queue.push(() => assignIndexToModule(dependency.module));
       }
     }
 
@@ -1130,16 +1145,21 @@ class Compilation extends Tapable {
         queue.push(() => assignIndexToDependencyBlock(b));
       }
 
+      // 找出所有的注入变量中的依赖
       if (block.variables) {
         iterationBlockVariable(block.variables, iteratorDependency);
       }
 
+      // 找出所有依赖
       if (block.dependencies) {
         iterationOfArrayCallback(block.dependencies, iteratorDependency);
       }
+
+      // 递归找出异步块中的所有依赖
       if (block.blocks) {
         const blocks = block.blocks;
         let indexBlock = blocks.length;
+
         while (indexBlock--) {
           iteratorBlock(blocks[indexBlock]);
         }
@@ -1151,15 +1171,28 @@ class Compilation extends Tapable {
       }
     }
 
+    function iteratorAllDependencies(d) {
+      queue.push(() => assignIndexToDependency(d));
+    }
+
+    function assignIndexToDependency(dependency) {
+      if (dependency.module) {
+        queue.push(() => assignIndexToModule(dependency.module));
+      }
+    }
+
+    /**
+     * 执行
+     */
     while (queue.length) {
       queue.pop()();
     }
   }
 
   /**
+   * 为以模块module根节点的模块依赖树中的节点分配各自的深度值
    * 
-   * 
-   * @param {Module} module 
+   * @param {Module} module 根模块节点 ( 入口节点 )
    * 
    * @memberof Compilation
    */
@@ -1210,79 +1243,92 @@ class Compilation extends Tapable {
   }
 
   /**
+   * 将依赖树中的依赖块添加到相应的块中
    * 处理指定块chunk与指定分块block的依赖
    *  1. 建立 chunk <--> dependency 的关系
    *  2. 建立 chunk <--> block 的关系
    * 
-   * @param {Module} block 分块
+   * @param {DependenciesBlock} block 依赖块
    * @param {Chunk} chunk 块
    * 
    * @memberof Compilation
    */
   processDependenciesBlockForChunk(block, chunk) {
-		/**
-     * 
+    /**
+     * 处理依赖 -- 将模块依赖对应的模块添加到块中
+     * @param {Dependency} d 
+     */
+    const iteratorDependency = d => {
+      let { module, weak } = d
+
+      // 忽略不是模块的依赖
+      if (!module) {
+        return;
+      }
+
+      // 是否是弱引用. 
+      // 如果是弱引用 , 那么构建块时 , 将不会包含模块的具体内容
+      if (weak) {
+        return;
+      }
+
+      /**
+       * 尝试将模块添加到块中
+       * 
+       * 如果 块中不包含该模块
+       * 那么 继续处理
+       * 否则 不做任何操作
+       */
+      if (chunk.addModule(module)) {
+        module.addChunk(chunk);
+
+        queue.push([module, chunk]);
+      }
+    };
+
+    /**
+     * 处理异步块 -- 
      * @param {Block} b 
      */
     const iteratorBlock = b => {
       let c;
 
-      //
-      // 分块和块建立关系
-      //
       if (!b.chunks) {
+        // 创建一个新的块
         c = this.addChunk(b.chunkName, b.module, b.loc);
-        b.chunks = [c];
-        c.addBlock(b);
+
+        b.chunks = [c]; // block -- 存储包含该异步依赖块的块
+        c.addBlock(b);  // chunk -- 存储包含的异步块
       } else {
+        // 
         c = b.chunks[0];
       }
-      chunk.addChunk(c);
-      c.addParent(chunk);
+
+      // 维护块与块之间的父子关系
+      chunk.addChunk(c);  // 父块添加子块的引用
+      c.addParent(chunk); // 子块添加父块的引用
+
+      // add 处理任务
       queue.push([b, c]);
-    };
-
-    /**
-     * 
-     * @param {Dependency} d 
-     */
-    const iteratorDependency = d => {
-      if (!d.module) {
-        return;
-      }
-
-      // 是否是弱引用. 如果是弱引用 , 那么构建块时 , 将不会包含模块的具体内容
-      if (d.weak) {
-        return;
-      }
-
-      //
-      // 块和模块建立关系
-      //
-      if (chunk.addModule(d.module)) {
-        d.module.addChunk(chunk);
-        queue.push([d.module, chunk]);
-      }
     };
 
     const queue = [
       [block, chunk]
     ];
 
-    //
-    // 遍历算法 : BFS
-    //
+    // 递归遍历 , 将所有依赖块都添加到响应的块中
     while (queue.length) {
       const queueItem = queue.pop();
-      block = queueItem[0];
-      chunk = queueItem[1];
 
-      // 遍历
+      block = queueItem[0]; // 依赖块
+      chunk = queueItem[1]; // 包含依赖块的块
+
+      // 遍历注入变量 , 将其中的模块依赖中的模块添加块中
       if (block.variables) {
         iterationBlockVariable(block.variables, iteratorDependency);
       }
 
-      // 遍历依赖
+      // 遍历依赖 , 模块依赖中的模块添加块中
       if (block.dependencies) {
         iterationOfArrayCallback(block.dependencies, iteratorDependency);
       }
@@ -1295,57 +1341,35 @@ class Compilation extends Tapable {
   }
 
   /**
+   * 模块排序 -- 按先序遍历顺序排序模块列表
+   * 排序顺序 : ASC
    * 
-   * 
-   * @param {any} block 
-   * @param {any} chunk 
+   * @param {Module[]} modules 
    * 
    * @memberof Compilation
    */
-  removeChunkFromDependencies(block, chunk) {
-    const iteratorDependency = d => {
-      if (!d.module) {
-        return;
-      }
-      if (!d.module.hasReasonForChunk(chunk)) {
-        if (d.module.removeChunk(chunk)) {
-          this.removeChunkFromDependencies(d.module, chunk);
-        }
-      }
-    };
-
-    const blocks = block.blocks;
-    for (let indexBlock = 0; indexBlock < blocks.length; indexBlock++) {
-      const chunks = blocks[indexBlock].chunks;
-      for (let indexChunk = 0; indexChunk < chunks.length; indexChunk++) {
-        const blockChunk = chunks[indexChunk];
-        chunk.removeChunk(blockChunk);
-        blockChunk.removeParent(chunk);
-        this.removeChunkFromDependencies(chunks, blockChunk);
-      }
-    }
-
-    if (block.dependencies) {
-      iterationOfArrayCallback(block.dependencies, iteratorDependency);
-    }
-
-    if (block.variables) {
-      iterationBlockVariable(block.variables, iteratorDependency);
-    }
+  sortModules(modules) {
+    modules.sort((a, b) => {
+      if (a.index < b.index) return -1;
+      if (a.index > b.index) return 1;
+      return 0;
+    });
   }
 
   /**
-   * 
+   * 为模块列表中的模块分配ID
    * 
    * 
    * @memberof Compilation
    */
   applyModuleIds() {
-    let unusedIds = [];
-    let nextFreeModuleId = 0;
-    let usedIds = [];
+    let unusedIds = [];         // 没有被使用的数字id
+    let nextFreeModuleId = 0;   // 下一个没使用的数字id
+    let usedIds = [];           // 已使用的id
     // TODO consider Map when performance has improved https://gist.github.com/sokra/234c077e1299b7369461f1708519c392
     const usedIdMap = Object.create(null);
+
+    // 收集已使用的id -- record文件中读取出来的id
     if (this.usedModuleIds) {
       Object.keys(this.usedModuleIds).forEach(key => {
         const id = this.usedModuleIds[key];
@@ -1356,6 +1380,7 @@ class Compilation extends Tapable {
       });
     }
 
+    // 收集已使用的id -- 自定义的id
     const modules1 = this.modules;
     for (let indexModule1 = 0; indexModule1 < modules1.length; indexModule1++) {
       const module1 = modules1[indexModule1];
@@ -1365,6 +1390,8 @@ class Compilation extends Tapable {
       }
     }
 
+    // 从已使用id中找出类型为数字的 , 并且是最大的.
+    // 从 0 ~ max , 找出没有被使用的数字id
     if (usedIds.length > 0) {
       let usedIdMax = -1;
       for (let index = 0; index < usedIds.length; index++) {
@@ -1389,6 +1416,13 @@ class Compilation extends Tapable {
     const modules2 = this.modules;
     for (let indexModule2 = 0; indexModule2 < modules2.length; indexModule2++) {
       const module2 = modules2[indexModule2];
+
+      /**
+       * id 没有被赋值
+       *   如果 有较小的数字id没有使用
+       *   那么 取出其中的一个使用
+       *   否则 使用较大的数字id ( nextFreeModuleId ++ )
+       */
       if (module2.id === null) {
         if (unusedIds.length > 0)
           module2.id = unusedIds.pop();
@@ -1399,8 +1433,7 @@ class Compilation extends Tapable {
   }
 
   /**
-   * 
-   * 
+   * 为块列表中的块分配ID
    * 
    * @memberof Compilation
    */
@@ -1452,20 +1485,20 @@ class Compilation extends Tapable {
   }
 
   /**
-   * 根据模块ID,
-   * 
-   * 
+   * 根据模块id , 重新排序模块列 , 同时对模块列表和块列表中的各项重新排序
    * @memberof Compilation
    */
   sortItemsWithModuleIds() {
-    // 以id的大小 , 排序模块列表
+    // 按id升序排列模块列表
     this.modules.sort(byId);
 
+    // 排序模块的项
     const modules = this.modules;
     for (let indexModule = 0; indexModule < modules.length; indexModule++) {
       modules[indexModule].sortItems();
     }
 
+    // 排序块的项
     const chunks = this.chunks;
     for (let indexChunk = 0; indexChunk < chunks.length; indexChunk++) {
       chunks[indexChunk].sortItems();
@@ -1473,9 +1506,7 @@ class Compilation extends Tapable {
   }
 
   /**
-   * 
-   * 
-   * 
+   * 根据块id , 重新块列表 , 同时对模块列表和块列表中的各项重新排序
    * @memberof Compilation
    */
   sortItemsWithChunkIds() {
@@ -1493,86 +1524,34 @@ class Compilation extends Tapable {
   }
 
   /**
-   * 
-   * 
-   * 
-   * @memberof Compilation
-   */
-  summarizeDependencies() {
-    function filterDups(array) {
-      const newArray = [];
-      for (let i = 0; i < array.length; i++) {
-        if (i === 0 || array[i - 1] !== array[i])
-          newArray.push(array[i]);
-      }
-      return newArray;
-    }
-    this.fileDependencies = (this.compilationDependencies || []).slice();
-    this.contextDependencies = [];
-    this.missingDependencies = [];
-
-    const children = this.children;
-    for (let indexChildren = 0; indexChildren < children.length; indexChildren++) {
-      const child = children[indexChildren];
-
-      this.fileDependencies = this.fileDependencies.concat(child.fileDependencies);
-      this.contextDependencies = this.contextDependencies.concat(child.contextDependencies);
-      this.missingDependencies = this.missingDependencies.concat(child.missingDependencies);
-    }
-
-    const modules = this.modules;
-    for (let indexModule = 0; indexModule < modules.length; indexModule++) {
-      const module = modules[indexModule];
-
-      if (module.fileDependencies) {
-        const fileDependencies = module.fileDependencies;
-        for (let indexFileDep = 0; indexFileDep < fileDependencies.length; indexFileDep++) {
-          this.fileDependencies.push(fileDependencies[indexFileDep]);
-        }
-      }
-      if (module.contextDependencies) {
-        const contextDependencies = module.contextDependencies;
-        for (let indexContextDep = 0; indexContextDep < contextDependencies.length; indexContextDep++) {
-          this.contextDependencies.push(contextDependencies[indexContextDep]);
-        }
-      }
-    }
-    this.errors.forEach(error => {
-      if (Array.isArray(error.missing)) {
-        error.missing.forEach(item => this.missingDependencies.push(item));
-      }
-    });
-    this.fileDependencies.sort();
-    this.fileDependencies = filterDups(this.fileDependencies);
-    this.contextDependencies.sort();
-    this.contextDependencies = filterDups(this.contextDependencies);
-    this.missingDependencies.sort();
-    this.missingDependencies = filterDups(this.missingDependencies);
-  }
-
-  /**
-   * 
-   * 
-   * 
+   * 生成编译内容摘要
    * @memberof Compilation
    */
   createHash() {
     const outputOptions = this.outputOptions;
-    const hashFunction = outputOptions.hashFunction;
-    const hashDigest = outputOptions.hashDigest;
-    const hashDigestLength = outputOptions.hashDigestLength;
-    const hash = crypto.createHash(hashFunction);
-    if (outputOptions.hashSalt)
+    const hashFunction = outputOptions.hashFunction;          // 散列算法
+    const hashDigest = outputOptions.hashDigest;              // 生成散列时 , 使用的加盐值
+    const hashDigestLength = outputOptions.hashDigestLength;  // 散列摘要的长度
+    const hash = crypto.createHash(hashFunction);             // 创建哈希实例
+
+    if (outputOptions.hashSalt) {
       hash.update(outputOptions.hashSalt);
+    }
+
+    // 为Template 更新生成内容摘要的原始值
     this.mainTemplate.updateHash(hash);
     this.chunkTemplate.updateHash(hash);
     this.moduleTemplate.updateHash(hash);
+
     this.children.forEach(function (child) {
       hash.update(child.hash);
     });
+
     // clone needed as sort below is inplace mutation
     const chunks = this.chunks.slice();
-		/**
+
+    /**
+     * 将有运行时的块排到后面去 ( 因为有运行时的块的hash , 依赖没有运行时的快 )
 		 * sort here will bring all "falsy" values to the beginning
 		 * this is needed as the "hasRuntime()" chunks are dependent on the
 		 * hashes of the non-runtime chunks.
@@ -1580,44 +1559,47 @@ class Compilation extends Tapable {
     chunks.sort((a, b) => {
       const aEntry = a.hasRuntime();
       const bEntry = b.hasRuntime();
-      if (aEntry && !bEntry) return 1;
-      if (!aEntry && bEntry) return -1;
+
+      if (aEntry && !bEntry) return 1;  // 
+      if (!aEntry && bEntry) return -1; // 
+
       return 0;
     });
+
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
       const chunkHash = crypto.createHash(hashFunction);
+
+      // 为Chunk 更新生成内容摘要的原始值
       if (outputOptions.hashSalt)
         chunkHash.update(outputOptions.hashSalt);
       chunk.updateHash(chunkHash);
+
+      // 为Template 更新生成内容摘要的原始值
       if (chunk.hasRuntime()) {
         this.mainTemplate.updateHashForChunk(chunkHash, chunk);
       } else {
         this.chunkTemplate.updateHashForChunk(chunkHash, chunk);
       }
+
       this.applyPlugins2("chunk-hash", chunk, chunkHash);
+
+      // 生成摘要
       chunk.hash = chunkHash.digest(hashDigest);
+
+      // 更新编译的hash
       hash.update(chunk.hash);
+
       chunk.renderedHash = chunk.hash.substr(0, hashDigestLength);
     }
-    this.fullHash = hash.digest(hashDigest);
-    this.hash = this.fullHash.substr(0, hashDigestLength);
-  }
 
-  modifyHash(update) {
-    const outputOptions = this.outputOptions;
-    const hashFunction = outputOptions.hashFunction;
-    const hashDigest = outputOptions.hashDigest;
-    const hashDigestLength = outputOptions.hashDigestLength;
-    const hash = crypto.createHash(hashFunction);
-    hash.update(this.fullHash);
-    hash.update(update);
+    // 生成摘要
     this.fullHash = hash.digest(hashDigest);
     this.hash = this.fullHash.substr(0, hashDigestLength);
   }
 
   /**
-   * 
+   * 生成模块中包含的资源
    * 
    * 
    * @memberof Compilation
@@ -1629,6 +1611,7 @@ class Compilation extends Tapable {
         Object.keys(module.assets).forEach((assetName) => {
           const fileName = this.getPath(assetName);
           this.assets[fileName] = module.assets[assetName];
+
           this.applyPlugins2("module-asset", module, fileName);
         });
       }
@@ -1666,7 +1649,6 @@ class Compilation extends Tapable {
           : chunkFilename;
 
       try {
-        // 没有运行时 或 
         const useChunkHash = !chunk.hasRuntime() ||
           (
             this.mainTemplate.useChunkHash &&
@@ -1680,7 +1662,7 @@ class Compilation extends Tapable {
 
         const cacheName = "c" + chunk.id;
 
-        // 
+        // 读取缓存
         if (this.cache &&
           this.cache[cacheName] &&
           this.cache[cacheName].hash === usedHash) {
@@ -1736,6 +1718,70 @@ class Compilation extends Tapable {
   }
 
   /**
+   * 汇总编译时出现的依赖
+   * 
+   * 
+   * @memberof Compilation
+   */
+  summarizeDependencies() {
+    function filterDups(array) {
+      const newArray = [];
+      for (let i = 0; i < array.length; i++) {
+        if (i === 0 || array[i - 1] !== array[i])
+          newArray.push(array[i]);
+      }
+      return newArray;
+    }
+
+    this.fileDependencies = (this.compilationDependencies || []).slice();
+    this.contextDependencies = [];
+    this.missingDependencies = [];
+
+    const children = this.children;
+    for (let indexChildren = 0; indexChildren < children.length; indexChildren++) {
+      const child = children[indexChildren];
+
+      this.fileDependencies = this.fileDependencies.concat(child.fileDependencies);
+      this.contextDependencies = this.contextDependencies.concat(child.contextDependencies);
+      this.missingDependencies = this.missingDependencies.concat(child.missingDependencies);
+    }
+
+    const modules = this.modules;
+    for (let indexModule = 0; indexModule < modules.length; indexModule++) {
+      const module = modules[indexModule];
+      
+      // 收集模块中的文件依赖
+      if (module.fileDependencies) {
+        const fileDependencies = module.fileDependencies;
+        for (let indexFileDep = 0; indexFileDep < fileDependencies.length; indexFileDep++) {
+          this.fileDependencies.push(fileDependencies[indexFileDep]);
+        }
+      }
+
+      // 收集上下文中的依赖
+      if (module.contextDependencies) {
+        const contextDependencies = module.contextDependencies;
+        for (let indexContextDep = 0; indexContextDep < contextDependencies.length; indexContextDep++) {
+          this.contextDependencies.push(contextDependencies[indexContextDep]);
+        }
+      }
+    }
+    this.errors.forEach(error => {
+      if (Array.isArray(error.missing)) {
+        error.missing.forEach(item => this.missingDependencies.push(item));
+      }
+    });
+
+    // 排序去重
+    this.fileDependencies.sort(); 
+    this.fileDependencies = filterDups(this.fileDependencies);      
+    this.contextDependencies.sort();
+    this.contextDependencies = filterDups(this.contextDependencies);
+    this.missingDependencies.sort();
+    this.missingDependencies = filterDups(this.missingDependencies);
+  }
+
+  /**
    * 
    * 
    * @memberof Compilation
@@ -1751,6 +1797,9 @@ class Compilation extends Tapable {
 
 
 
+  // ----------------------------------------------------------------
+  // **************************  Common  ****************************
+  // ----------------------------------------------------------------
   /**
    * 调用路径模板引擎 , 返回解析之后的路径
    * 
@@ -1765,6 +1814,24 @@ class Compilation extends Tapable {
     data.hash = data.hash || this.hash;
 
     return this.mainTemplate.applyPluginsWaterfall("asset-path", filename, data);
+  }
+
+  /**
+   * 
+   * 
+   * @param {any} update 
+   * @memberof Compilation
+   */
+  modifyHash(update) {
+    const outputOptions = this.outputOptions;
+    const hashFunction = outputOptions.hashFunction;
+    const hashDigest = outputOptions.hashDigest;
+    const hashDigestLength = outputOptions.hashDigestLength;
+    const hash = crypto.createHash(hashFunction);
+    hash.update(this.fullHash);
+    hash.update(update);
+    this.fullHash = hash.digest(hashDigest);
+    this.hash = this.fullHash.substr(0, hashDigestLength);
   }
 
   /**
@@ -1850,8 +1917,6 @@ class Compilation extends Tapable {
     this.chunkTemplate.plugin(name, fn);
   }
 
-
-
   /**
    * 记录构建依赖过程中发现的所有警告和异常
    * 
@@ -1933,6 +1998,46 @@ class Compilation extends Tapable {
       });
 
     });
+  }
+
+  /**
+   * 
+   * 
+   * @param {DependenciesBlock} block 
+   * @param {Chunk} chunk 
+   * 
+   * @memberof Compilation
+   */
+  removeChunkFromDependencies(block, chunk) {
+    const iteratorDependency = d => {
+      if (!d.module) {
+        return;
+      }
+      if (!d.module.hasReasonForChunk(chunk)) {
+        if (d.module.removeChunk(chunk)) {
+          this.removeChunkFromDependencies(d.module, chunk);
+        }
+      }
+    };
+
+    const blocks = block.blocks;
+    for (let indexBlock = 0; indexBlock < blocks.length; indexBlock++) {
+      const chunks = blocks[indexBlock].chunks;
+      for (let indexChunk = 0; indexChunk < chunks.length; indexChunk++) {
+        const blockChunk = chunks[indexChunk];
+        chunk.removeChunk(blockChunk);
+        blockChunk.removeParent(chunk);
+        this.removeChunkFromDependencies(chunks, blockChunk);
+      }
+    }
+
+    if (block.dependencies) {
+      iterationOfArrayCallback(block.dependencies, iteratorDependency);
+    }
+
+    if (block.variables) {
+      iterationBlockVariable(block.variables, iteratorDependency);
+    }
   }
 }
 

@@ -229,7 +229,7 @@ module.exports = class MainTemplate extends Template {
       moduleTemplate,
       dependencyTemplates
     );
-    
+
     if (chunk.hasEntryModule()) {
       source = this.applyPluginsWaterfall("render-with-entry", source, chunk, hash);
     }
@@ -241,12 +241,13 @@ module.exports = class MainTemplate extends Template {
   }
 
   /**
-   * 
+   * 为模块渲染require函数
+   * 自定义模块使用的require函数
    * 
    * @param {String} hash hash值
-   * @param {Chunk} chunk 块
+   * @param {Chunk} chunk 块 
    * @param {String} varModuleId moduleId的变量名
-   * @returns {String}
+   * @returns {String} this.requireFn
    */
   renderRequireFunctionForModule(hash, chunk, varModuleId) {
     return this.applyPluginsWaterfall("module-require", this.requireFn, chunk, hash, varModuleId);
@@ -274,7 +275,7 @@ module.exports = class MainTemplate extends Template {
    */
   renderCurrentHashCode(hash, length) {
     length = length || Infinity;
-    
+
     return this.applyPluginsWaterfall("current-hash", JSON.stringify(hash.substr(0, length)), length);
   }
 
@@ -309,22 +310,23 @@ module.exports = class MainTemplate extends Template {
 
 
   /**
+   * 更新生成内容摘要的原始值
    * 
-   * 
-   * @param {any} hash 
+   * @param {crypto.hash} hash hash实例
    */
   updateHash(hash) {
     hash.update("maintemplate");
     hash.update("3");
     hash.update(this.outputOptions.publicPath + "");
+
     this.applyPlugins("hash", hash);
   }
 
   /**
    * 
    * 
-   * @param {any} hash 
-   * @param {any} chunk 
+   * @param {crypto.hash} hash hash实例 
+   * @param {Chunk} chunk 
    */
   updateHashForChunk(hash, chunk) {
     this.updateHash(hash);

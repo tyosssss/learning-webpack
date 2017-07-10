@@ -22,17 +22,22 @@ module.exports = class ChunkTemplate extends Template {
   render(chunk, moduleTemplate, dependencyTemplates) {
     const moduleSources = this.renderChunkModules(chunk, moduleTemplate, dependencyTemplates);
     const core = this.applyPluginsWaterfall("modules", moduleSources, chunk, moduleTemplate, dependencyTemplates);
-    
+
     let source = this.applyPluginsWaterfall("render", core, chunk, moduleTemplate, dependencyTemplates);
     if (chunk.hasEntryModule()) {
       source = this.applyPluginsWaterfall("render-with-entry", source, chunk);
     }
-    
+
     chunk.rendered = true;
 
     return new ConcatSource(source, ";");
   }
 
+  /**
+   * 更新生成内容摘要的原始值
+   * 
+   * @param {crypto.hash} hash hash实例
+   */
   updateHash(hash) {
     hash.update("ChunkTemplate");
     hash.update("2");

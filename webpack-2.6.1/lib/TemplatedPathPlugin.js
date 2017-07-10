@@ -72,7 +72,7 @@ const withHashLength = (replacer, handlerFn) => {
     if (length && handlerFn) {
       return handlerFn(length);
     }
-    
+
     const hash = replacer.apply(this, arguments);
 
     return length
@@ -134,10 +134,14 @@ class TemplatedPathPlugin {
       mainTemplate.plugin("hash-for-chunk", function (hash, chunk) {
         const outputOptions = this.outputOptions;
         const chunkFilename = outputOptions.chunkFilename || outputOptions.filename;
-        if (REGEXP_CHUNKHASH_FOR_TEST.test(chunkFilename))
+
+        if (REGEXP_CHUNKHASH_FOR_TEST.test(chunkFilename)) {
           hash.update(JSON.stringify(chunk.getChunkMaps(true, true).hash));
-        if (REGEXP_NAME_FOR_TEST.test(chunkFilename))
+        }
+
+        if (REGEXP_NAME_FOR_TEST.test(chunkFilename)) {
           hash.update(JSON.stringify(chunk.getChunkMaps(true, true).name));
+        }
       });
     });
   }

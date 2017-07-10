@@ -55,6 +55,8 @@ module.exports = class AsyncDependenciesBlock extends DependenciesBlock {
 
   sortItems() {
     super.sortItems();
+    
+    // 属于某个块
     if (this.chunks) {
       this.chunks.sort((a, b) => {
         let i = 0;

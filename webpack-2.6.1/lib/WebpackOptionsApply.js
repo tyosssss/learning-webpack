@@ -294,8 +294,10 @@ class WebpackOptionsApply extends OptionsApply {
       compiler.apply(new SizeLimitsPlugin(options.performance));
     }
 
+    // 模板路径解析插件
     compiler.apply(new TemplatedPathPlugin());
 
+    // 记录ids的插件
     compiler.apply(new RecordIdsPlugin());
 
     compiler.apply(new WarnCaseSensitiveModulesPlugin());

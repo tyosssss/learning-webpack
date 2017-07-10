@@ -75,9 +75,10 @@ class DependenciesBlock {
   }
 
 	/**
-	 * 更新hash
-	 * @param {String} hash 
-	 */
+   * 更新生成内容摘要的原始值
+   * 
+   * @param {crypto.hash} hash hash实例
+   */
   updateHash(hash) {
     function updateHash(i) {
       i.updateHash(hash);
