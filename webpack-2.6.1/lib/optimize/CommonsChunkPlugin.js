@@ -175,6 +175,7 @@ You can however specify the name of the async chunk by passing the desired strin
           this.async
         );
 
+        // 遍历所有目标块
         // iterate over all our new chunks
         targetChunks.forEach((targetChunk, idx) => {
 
@@ -315,14 +316,14 @@ Take a look at the "name"/"names" or async/children option.`);
   }
 
   /**
-   * 
+   * 获得受映像的块
    * 
    * @param {Compilaction} compilation 编译实例
    * @param {Chunk} allChunks 编译时 , 遇到的所有块 
    * @param {Chunk} targetChunk 目标块
    * @param {Chunk[]} targetChunks 目标块列表
-   * @param {Index} currentIndex 
-   * @param {Chunk[]} selectedChunks 
+   * @param {Index} currentIndex 目标块在目标块列表中的位置
+   * @param {Chunk[]} selectedChunks 配置的受影响块
    * @param {Boolean} asyncOption 
    * @param {Boolean} children 
    * @returns {Chunk[]} 返回受影响的块
@@ -334,7 +335,7 @@ Take a look at the "name"/"names" or async/children option.`);
     // 将选中块作为受影响的块
     if (Array.isArray(selectedChunks)) {
       return allChunks.filter(chunk => {
-        const notCommmonChunk = chunk !== targetChunk;
+        const notCommmonChunk = chunk !== targetChunk;  // 避免循环处理
         const isSelectedChunk = selectedChunks.indexOf(chunk.name) > -1;
 
         return notCommmonChunk && isSelectedChunk;
@@ -356,13 +357,22 @@ Take a look at the "name"/"names" or async/children option.`);
     }
 
 		/**
-		 * past this point only entry chunks are allowed to become commonChunks
+		 * 目标块不能
 		 */
     if (targetChunk.parents.length > 0) {
       compilation.errors.push(new Error("CommonsChunkPlugin: While running in normal mode it's not allowed to use a non-entry chunk (" + targetChunk.name + ")"));
       return;
     }
 
+    /**
+     * 如果我们找到一个“targetchunk”，这也是一个正常的块（意味着它可能被指定为一个条目），并且当前的目标块在它之后，并且找到的块有一个运行时使该块成为当前的“受影响”块 目标块。
+
+
+为了理解这个方法看看“examples / chunkhash”，这基本上将导致运行时被提取到当前的目标块。
+
+运行：
+“运行时”是您可能在解决模块的捆绑包中看到的“webpack”块
+     */
 		/**
 		 * If we find a "targetchunk" that is also a normal chunk (meaning it is probably specified as an entry)
 		 * and the current target chunk comes after that and the found chunk has a runtime*

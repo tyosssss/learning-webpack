@@ -175,9 +175,9 @@ class Chunk {
   }
 
   /**
+   * 添加块拥有的异步块
    * 
-   * 
-   * @param {any} block 
+   * @param {Dependencies} block 
    * @returns 
    * @memberof Chunk
    */
@@ -331,6 +331,10 @@ class Chunk {
     return true;
   }
 
+  /**
+   * 
+   * @param {Chunk} newChunk 
+   */
   split(newChunk) {
     this.blocks.forEach(block => {
       newChunk.blocks.push(block);
