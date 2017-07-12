@@ -195,6 +195,7 @@ You can however specify the name of the async chunk by passing the desired strin
             this.async,
             this.children
           );
+          
           // bail if no chunk is affected
           if (!affectedChunks) {
             return;
@@ -223,8 +224,9 @@ You can however specify the name of the async chunk by passing the desired strin
           if (this.minSize) {
             const modulesSize = this.calculateModulesSize(extractableModules);
             // if too small, bail
-            if (modulesSize < this.minSize)
+            if (modulesSize < this.minSize){
               return;
+            }
           }
 
           // Remove modules that are moved to commons chunk from their original chunks
@@ -236,7 +238,7 @@ You can however specify the name of the async chunk by passing the desired strin
 
           // connect all extracted modules with the common chunk
           this.addExtractedModulesToTargetChunk(targetChunk, extractableModules);
-
+          
           // set filenameTemplate for chunk
           if (this.filenameTemplate) {
             targetChunk.filenameTemplate = this.filenameTemplate;
@@ -246,9 +248,12 @@ You can however specify the name of the async chunk by passing the desired strin
           // with the commonChunk and get the origins for the asyncChunk (remember "asyncChunk === commonChunk" at this moment).
           // bail out
           if (this.async) {
+            // 异步模式 -- 建立连接
+
             this.moveExtractedChunkBlocksToTargetChunk(chunksWithExtractedModules, targetChunk);
             asyncChunk.origins = this.extractOriginsOfChunksWithExtractedModules(chunksWithExtractedModules);
           } else {
+            // 普通模式 -- 建立连接
             // we are not in "async" mode
             // connect used chunks with commonChunk - shouldnt this be reallyUsedChunks here?
             this.makeTargetChunkParentOfAffectedChunks(affectedChunks, targetChunk);
@@ -266,8 +271,8 @@ You can however specify the name of the async chunk by passing the desired strin
    * @param {Chunk} allChunks 编译时 , 遇到的所有块
    * @param {Compilaction} compilation 编译实例
    * @param {String[]} chunkNames 公共块的块名
-   * @param {Boolean} children 
-   * @param {Boolean} asyncOption
+   * @param {Boolean} children 是否将目标块 ( 公共块 ) 的子块 ( 异步块 ) 作为受影响块
+   * @param {Boolean} asyncOption 异步选项
    * @returns {Chunk[]} 返回目标块
    * @memberof CommonsChunkPlugin
    */
@@ -324,15 +329,15 @@ Take a look at the "name"/"names" or async/children option.`);
    * @param {Chunk[]} targetChunks 目标块列表
    * @param {Index} currentIndex 目标块在目标块列表中的位置
    * @param {Chunk[]} selectedChunks 配置的受影响块
-   * @param {Boolean} asyncOption 
-   * @param {Boolean} children 
+   * @param {Boolean} asyncOption 异步选项
+   * @param {Boolean} children 是否将目标块 ( 公共块 ) 的子块 ( 异步块 ) 作为受影响块
    * @returns {Chunk[]} 返回受影响的块
    * @memberof CommonsChunkPlugin
    */
   getAffectedChunks(compilation, allChunks, targetChunk, targetChunks, currentIndex, selectedChunks, asyncOption, children) {
     const asyncOrNoSelectedChunk = children || asyncOption;
 
-    // 将选中块作为受影响的块
+    // 1. 将选中块作为受影响的块
     if (Array.isArray(selectedChunks)) {
       return allChunks.filter(chunk => {
         const notCommmonChunk = chunk !== targetChunk;  // 避免循环处理
@@ -342,9 +347,9 @@ Take a look at the "name"/"names" or async/children option.`);
       });
     }
 
+    // 2. children == true or async = true
     if (asyncOrNoSelectedChunk) {
-      // 新建的目标块 , 直接返回
-      // nothing to do here
+      // 新建的目标块 , 直接返回 ( nothing to do here )
       if (!targetChunk.chunks) {
         return [];
       }
@@ -364,15 +369,6 @@ Take a look at the "name"/"names" or async/children option.`);
       return;
     }
 
-    /**
-     * 如果我们找到一个“targetchunk”，这也是一个正常的块（意味着它可能被指定为一个条目），并且当前的目标块在它之后，并且找到的块有一个运行时使该块成为当前的“受影响”块 目标块。
-
-
-为了理解这个方法看看“examples / chunkhash”，这基本上将导致运行时被提取到当前的目标块。
-
-运行：
-“运行时”是您可能在解决模块的捆绑包中看到的“webpack”块
-     */
 		/**
 		 * If we find a "targetchunk" that is also a normal chunk (meaning it is probably specified as an entry)
 		 * and the current target chunk comes after that and the found chunk has a runtime*
@@ -382,6 +378,11 @@ Take a look at the "name"/"names" or async/children option.`);
 		 * result in the runtime to be extracted to the current target chunk.
 		 *
 		 * *runtime: the "runtime" is the "webpack"-block you may have seen in the bundles that resolves modules etc.
+     * 
+     * 
+     * 受影响块的条件 : 
+     * 1. 不包含在目标块列表中的所有包含运行时的块 ( 通常是入口块 )
+     * 2. 目标块列表中 , 位置比当前目标块靠前的 , 并且包含运行时的目标块
 		 */
     return allChunks.filter((chunk) => {
       const found = targetChunks.indexOf(chunk);
@@ -421,12 +422,12 @@ Take a look at the "name"/"names" or async/children option.`);
   }
 
   /**
-   * 获得可提取的模块列表
+   * 获得可提取的模块 ( 公共模块 )
    * 
    * @param {Number | Function} minChunks 提取条件
-   * @param {Chunk} usedChunks 
-   * @param {Chunk} targetChunk 
-   * @returns {Module[]} 返回可提取的模块列表
+   * @param {Function} usedChunks 可用的块
+   * @param {Chunk} targetChunk 目标块
+   * @returns {Module[]} 返回可提取的模块 ( 公共模块 )
    * @memberof CommonsChunkPlugin
    */
   getExtractableModules(minChunks, usedChunks, targetChunk) {
@@ -477,15 +478,13 @@ Take a look at the "name"/"names" or async/children option.`);
       .map(entry => entry[0]);
   }
 
-  // If minChunks is a function use that
-  // otherwhise check if a module is used at least minChunks or 2 or usedChunks.length time
   /**
    * 
    * 
    * @param {Number | Function} minChunks 提取条件
-   * @param {Chunk} targetChunk 
-   * @param {Number} usedChunksLength 
-   * @returns 
+   * @param {Chunk} targetChunk 目标块
+   * @param {Number} usedChunksLength 可用块的长度
+   * @returns {Function} 返回一个模块过滤器 , 用于过滤出公共模块
    * @memberof CommonsChunkPlugin
    */
   getModuleFilter(minChunks, targetChunk, usedChunksLength) {
@@ -512,11 +511,11 @@ Take a look at the "name"/"names" or async/children option.`);
   }
 
   /**
-   * 提取模块 , 返回受影响的块 ( 即被提取了公共模块的块 )
+   * 从受影响的块中 , 提取公共模块 ( 即从受影响的块中删除公共模块 )
    * 
-   * @param {Module[]} reallyUsedModules 
-   * @param {Chunk[]} usedChunks 
-   * @returns {Set<Chunk>}
+   * @param {Module[]} reallyUsedModules 公共模块
+   * @param {Chunk[]} usedChunks 受影响的块
+   * @returns {Set<Chunk>} 返回没有重复的公共模块列表
    * @memberof CommonsChunkPlugin
    */
   extractModulesAndReturnAffectedChunks(reallyUsedModules, usedChunks) {
@@ -538,10 +537,10 @@ Take a look at the "name"/"names" or async/children option.`);
   }
 
   /**
-   * 将提取的模块添加到目标块 ( 公共块 ) 中
+   * 将提取的公共模块 , 添加到目标块中
    * 
-   * @param {Chunk} chunk 公共块
-   * @param {Modules[]} modules 提取的块
+   * @param {Chunk} chunk 目标块
+   * @param {Modules[]} modules 公共模块
    * @memberof CommonsChunkPlugin
    */
   addExtractedModulesToTargetChunk(chunk, modules) {
@@ -552,26 +551,24 @@ Take a look at the "name"/"names" or async/children option.`);
   }
 
   /**
+   * 受影响块的所有异步块与目标块建立关系
+   * @param {Set<Chunk>} chunks 受影响的块
+   * @param {Chunk} targetChunk 公共块
    * 
-   * 
-   * @param {any} chunks 
-   * @param {any} targetChunk 
    * @memberof CommonsChunkPlugin
    */
   moveExtractedChunkBlocksToTargetChunk(chunks, targetChunk) {
     for (let chunk of chunks) {
       for (let block of chunk.blocks) {
-        block.chunks.unshift(targetChunk);
-        targetChunk.addBlock(block);
+        block.chunks.unshift(targetChunk);  // block       --> targetChunk
+        targetChunk.addBlock(block);        // targetChunk --> block
       }
     }
   }
 
   /**
-   * 
-   * 
-   * @param {any} chunks 
-   * @returns 
+   * 修改受影响块的来源 -- 新增 "async commons"
+   * @param {Set<Chunk>} chunks 受影响的块
    * @memberof CommonsChunkPlugin
    */
   extractOriginsOfChunksWithExtractedModules(chunks) {
@@ -590,10 +587,13 @@ Take a look at the "name"/"names" or async/children option.`);
 
 
   /**
+   * 创建目标快和受影响块的父子关系
    * 
+   * targetChunk   是 affectedChunk 的父级块
+   * affectedChunk 是 targetChunk   的子块
    * 
-   * @param {Chunk[]} usedChunks 
-   * @param {Chunk} commonChunk 
+   * @param {Chunk[]} usedChunks 受影响的块
+   * @param {Chunk} commonChunk 公共块
    * @memberof CommonsChunkPlugin
    */
   makeTargetChunkParentOfAffectedChunks(usedChunks, commonChunk) {
@@ -603,6 +603,7 @@ Take a look at the "name"/"names" or async/children option.`);
       // add chunk to commonChunk
       commonChunk.addChunk(chunk);
 
+      // 将公共块作为块的前置入口
       for (let entrypoint of chunk.entrypoints) {
         entrypoint.insertChunk(commonChunk, chunk);
       }

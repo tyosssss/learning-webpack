@@ -23,7 +23,7 @@ class Entrypoint {
 	/**
 	 * 插入一个块
 	 * @param {Chunk} chunk 块实例
-	 * @param {Number} before 插入位置
+	 * @param {Chunk} before 插入位置
 	 */
 	insertChunk(chunk, before) {
 		const idx = this.chunks.indexOf(before);
