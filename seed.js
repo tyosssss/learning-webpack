@@ -5,16 +5,16 @@ const config = require(resolve(configPath))
 
 
 
-config.plugins.push({
-  apply(compiler) {
-    compiler.plugin("done", function (stats) {
-      console.log('---')
-      console.log(stats.toJson({
-        showChunkOrigins: true
-      }))
-    })
-  }
-})
+// config.plugins.push({
+//   apply(compiler) {
+//     compiler.plugin("done", function (stats) {
+//       console.log('---')
+//       console.log(stats.toJson({
+//         showChunkOrigins: true
+//       }))
+//     })
+//   }
+// })
 
 webpack(config, function (err) {
   if (err) {
