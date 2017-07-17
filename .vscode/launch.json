@@ -14,7 +14,7 @@
       "name": "Launch webpack",
       "program": "${workspaceRoot}/seed.js",
       "args": [
-        "examples//commons-chunk-plugin//example5//webpack.config.js",
+        "examples//commons-chunk-plugin//example6//webpack.config.js",
         // "examples/dll-plugin/webpack.config.js"
         // "examples//DefinePlugin//webpack.config1.js"
         // "examples/enhanced-resolve/example.js"

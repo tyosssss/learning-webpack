@@ -956,10 +956,15 @@ class Compilation extends Tapable {
 
     //
     // 优化chunks
+    // 返回true  -- 进入下一个循环
+    // 返回false -- 进入下一个优化阶段
     // 
-    while (self.applyPluginsBailResult1("optimize-chunks-basic", self.chunks) ||
+    while (
+      self.applyPluginsBailResult1("optimize-chunks-basic", self.chunks) ||
       self.applyPluginsBailResult1("optimize-chunks", self.chunks) ||
-      self.applyPluginsBailResult1("optimize-chunks-advanced", self.chunks)); // eslint-disable-line no-extra-semi
+      self.applyPluginsBailResult1("optimize-chunks-advanced", self.chunks)
+    ) ; // eslint-disable-line no-extra-semi
+
     self.applyPlugins1("after-optimize-chunks", self.chunks);
 
 
@@ -1056,7 +1061,7 @@ class Compilation extends Tapable {
             self.applyPlugins1("after-optimize-assets", self.assets);
             if (self.applyPluginsBailResult("need-additional-seal")) {
               self.unseal();
-              
+
               return self.seal(callback);
             }
             return self.applyPluginsAsync("after-seal", callback);
@@ -1749,7 +1754,7 @@ class Compilation extends Tapable {
     const modules = this.modules;
     for (let indexModule = 0; indexModule < modules.length; indexModule++) {
       const module = modules[indexModule];
-      
+
       // 收集模块中的文件依赖
       if (module.fileDependencies) {
         const fileDependencies = module.fileDependencies;
@@ -1773,8 +1778,8 @@ class Compilation extends Tapable {
     });
 
     // 排序去重
-    this.fileDependencies.sort(); 
-    this.fileDependencies = filterDups(this.fileDependencies);      
+    this.fileDependencies.sort();
+    this.fileDependencies = filterDups(this.fileDependencies);
     this.contextDependencies.sort();
     this.contextDependencies = filterDups(this.contextDependencies);
     this.missingDependencies.sort();
